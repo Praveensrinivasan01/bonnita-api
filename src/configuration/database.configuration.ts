@@ -19,7 +19,7 @@ export const databaseConfig: Omit<DBConfig, 'expiresIn' | 'secret'> = {
     type: process.env.TYPE,
     database: process.env.DATABASE,
     host: process.env.HOST,
-    port: Number(process.env.PORT),
+    port: Number(process.env.DBPORT),
     username: process.env.USER,
     password: process.env.PASSWORD,
     synchronize: Boolean(process.env.SYNCHRONIZE),
@@ -27,7 +27,7 @@ export const databaseConfig: Omit<DBConfig, 'expiresIn' | 'secret'> = {
 
 console.log("DB::: ", databaseConfig);
 
-export const portConfig: Pick<DBConfig, 'port'> = { port: Number(process.env.APP_PORT) }
+export const portConfig: Pick<DBConfig, 'port'> = { port: Number(process.env.PORT) }
 
 export const jwtConfig: Pick<DBConfig, 'expiresIn' | 'secret'> = {
     secret: process.env.JWT_SECRET,

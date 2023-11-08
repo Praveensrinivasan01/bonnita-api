@@ -12,7 +12,7 @@ import { OrderModule } from './modules/order/order.module';
 
 @Module({
   imports: [ConfigModule.forRoot({ isGlobal: true }),
-    TypeOrmModule.forRoot(typeOrmConfig), UsersModule, AdminModule, OrderModule],
+    TypeOrmModule.forRoot(typeOrmConfig)],
   controllers: [AppController],
   providers: [AppService],
 })
