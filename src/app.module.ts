@@ -11,8 +11,7 @@ import { LandingpageModule } from './modules/landingpage/landingpage.module';
 import { OrderModule } from './modules/order/order.module';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }),
-    TypeOrmModule.forRoot(typeOrmConfig)],
+  imports: [],
   controllers: [AppController],
   providers: [AppService],
 })
