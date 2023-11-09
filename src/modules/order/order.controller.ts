@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
 import { OrderService } from './order.service';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AddOrUpdateOrderDto } from 'src/dto/order.dto';
@@ -56,6 +56,17 @@ export class OrderController {
          @Query('offset') offset: string
      ) {
          return await this.orderService.totalRecords(offset);
+     }
+
+
+     @Get('get-paydata/:orderid')
+     @HttpCode(HttpStatus.OK)
+     @ApiOperation({ summary: 'To get all the products' })
+     @ApiResponse({ status: 200, description: 'fetched all products Successfully' })
+     @ApiResponse({ status: 400, description: 'Bad Request' })
+     @ApiResponse({ status: 500, description: 'Internal Server Error' })
+     async getDetailpay(@Param("orderid") orderid: string) {
+         return this.orderService.getDetailpay(orderid);
      }
 
 

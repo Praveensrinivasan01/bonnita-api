@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import axios from 'axios';
 import { CommonService } from 'src/common/common.service';
 import { AddOrUpdateOrderDto } from 'src/dto/order.dto';
 import { E_ProductCartItem } from 'src/entities/order-management/cart-item.entity';
@@ -179,6 +180,41 @@ where td.createdat >= NOW() - INTERVAL '24 hours') as total_count
             return CommonService.error(error)
         }
     }
+
+    async getDetailpay(orderid) {
+        try {
+          const config = {
+            method: 'GET',
+            url: `https://sandbox.cashfree.com/pg/orders/${orderid}`,
+            headers :{
+              'Content-Type': 'application/json',
+              'x-api-version': '2022-09-01',
+              'x-client-id': process.env.APPKEY,
+              'x-client-secret': process.env.SECRET_KEY,
+            }
+      
+          };
+          let res
+          axios(config)
+            .then(function (response) {
+              console.log(response.data);
+               res=response.data
+            })
+            .catch(function (error) {
+              console.error(error);
+            });
+          return {
+            statusCode: 200,
+            message: 'all products fetched successfully',
+            data: res,
+          };
+        } catch (error) {
+          console.log(error);
+          return CommonService.error(error);
+        }
+      }
+    
+
 
 
 }
