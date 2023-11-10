@@ -561,10 +561,31 @@ export class ProductService {
 
                                )) as productdetails
   from tblproduct t where t.id= '${product_id}' `);
+
+      const colormapping = await this.dataSource.query(`  select id,color,color_name  from tblproduct t where t.name in (select name from tblproduct t2 where t2.id = '${product_id}')`)
+
       return {
         statusCode: 200,
         message: 'all product fetched successfully',
         data: productMapping[0].productdetails[0],
+        color: colormapping
+      };
+    } catch (error) {
+      console.log(error);
+      return CommonService.error(error);
+    }
+  }
+
+  async colorMapping(product_id: string) {
+    try {
+
+      const colormapping = await this.dataSource.query(`  select id,color,color_name  
+      from tblproduct t where t.name in (select name from tblproduct t2 where t2.id = '${product_id}') and t.id <> '${product_id}' `)
+
+      return {
+        statusCode: 200,
+        message: 'all color fetched successfully',
+        data: colormapping
       };
     } catch (error) {
       console.log(error);
@@ -574,29 +595,22 @@ export class ProductService {
 
   async categoryMapping() {
     try {
-      const categoryMapping = await this.dataSource.query(`SELECT
-            json_agg(
-                jsonb_build_object(
-                    'category_id', tc.id::text,
-                    'category_name', tc.name,
-                    'subcategories', (
-                        SELECT json_agg(
-                            jsonb_build_object(
-                                'subcategory_id', ts.id::text,
-                                'subcategory_name', ts.name
-                            )
-                        )
-                        FROM tblproduct_subcategory ts
-                        WHERE ts.category_id = tc.id
-                    )
-                )
-            )
-        FROM tblproduct_category tc;
+      const categoryMapping = await this.dataSource.query(`select tc.id as "category_id",tc."name" as "category_name",
+      (SELECT json_agg(
+                         jsonb_build_object(
+                             'subcategory_id', ts.id::text,
+                             'subcategory_name', ts.name
+                         )
+                     )
+                     FROM tblproduct_subcategory ts
+                     WHERE ts.category_id = tc.id) as subcategories
+     from tblproduct_category tc join tblproduct_subcategory ts on ts.category_id = tc.id
+     group by tc.id
          `);
       return {
         statusCode: 200,
         message: 'all product fetched successfully',
-        data: categoryMapping[0].json_agg,
+        data: categoryMapping,
       };
     } catch (error) {
       console.log(error);
@@ -841,39 +855,16 @@ export class ProductService {
     }
   }
 
-  async shopMapping(category, subcategory, search, price, offset) {
+  async shopMapping(category, subcategory, search, price: string, offset) {
     console.log(category, subcategory, search, price, offset);
     let searchVariable = '';
     if (search && search != undefined) {
       searchVariable = `and (t."name" ilike '%${search}%' or t.code ilike  '%${search}%' )`;
     }
 
-    console.log(`   select coalesce(round(avg(tr.rating)),5) as total_rating,t.id,t.name,t.code,t.quantity ,t.description,t.features,t.category_id,t.subcategory_id,t.color,
-    t."size" ,t.mrp,t.selling_price,t.about,ti.front_side  
-    from tblproduct t 
-    join tblproduct_category tc on t.category_id = tc.id
-    join tblproduct_subcategory ts on ts.id = t.subcategory_id 
-    left join tblproduct_review tr on tr.product_id =t.id
-    join tblproduct_image ti on ti.id = t.image_id 
-    where (case 
-      when ${category}='all' then 
-      tc.name ilike '%%' else
-      tc.name=${category} end) 
-          and (case 
-      when ${subcategory}='all' then 
-      ts.name ilike '%%' else
-      ts.name=${subcategory} end)   
-     ${searchVariable}         
-      group by tr.product_id ,t.id,t.name,t.code,t.quantity ,
-             t.description,t.features,t.category_id,
-             t.subcategory_id,t.color,t."size" ,t.mrp,ti.front_side 
-             order by t.selling_price  ${
-               price == 'highToLow' ? 'desc' : 'asc'
-             } offset ${offset} limit 15`);
-
     try {
       const shopItems = await this.dataSource
-        .query(`   select coalesce(round(avg(tr.rating)),5) as total_rating,t.id,t.name,t.code,t.quantity ,t.description,t.features,t.category_id,t.subcategory_id,t.color,
+        .query(`select distinct on (t."name",t.selling_price) coalesce(round(avg(tr.rating)),5) as total_rating,t.id,t.name,t.code,t.quantity ,t.description,t.features,t.category_id,t.subcategory_id,t.color,
           t."size" ,t.mrp,t.selling_price,t.about,ti.front_side  
           from tblproduct t 
           join tblproduct_category tc on t.category_id = tc.id
@@ -892,9 +883,7 @@ export class ProductService {
             group by tr.product_id ,t.id,t.name,t.code,t.quantity ,
                    t.description,t.features,t.category_id,
                    t.subcategory_id,t.color,t."size" ,t.mrp,ti.front_side 
-                   order by t.selling_price  ${
-                     price == 'highToLow' ? 'desc' : 'asc'
-                   } offset ${offset} limit 15`);
+                   order by t.selling_price,t.name  ${price == "'lowToHigh'" ? 'asc' : 'desc'} offset ${offset} limit 15`);
 
       if (!shopItems.length) {
         console.log('no shopItems for now, please add some.');

@@ -60,13 +60,13 @@ export class LandingpageService {
 
     async getNewArrivals() {
         try {
-            const newArrivals = await this.dataSource.query(`select t.id,t."name",'new' as new,ti.id as product_image_id,ti."front_side",ti."back_side",ti."left_side",ti."right_side",coalesce (cast(round(avg(tr.rating)) as int),5)  as rating, 
+            const newArrivals = await this.dataSource.query(`select distinct on (t.name) t.id,t."name",'new' as new,ti.id as product_image_id,ti."front_side",coalesce (cast(round(avg(tr.rating)) as int),5)  as rating, 
             t.mrp ,t.selling_price,t.description  ,
             jsonb_build_object('OuterShell',t.code,'SKU',t.code,'color',t.color,'Lining',t.color) as Information
      from tblproduct t  
                  join tblproduct_image ti on ti.id = t.image_id 
                  left join tblproduct_review tr on tr.product_id = t.id
-                 group by t.id,ti."id",tr.product_id  order by t.createdat desc limit 4`)
+                 group by t.id,ti."id",tr.product_id  order by t.name,t.createdat desc limit 4`)
             if (!newArrivals.length) { console.log("no newArrivals for now, please add some."); return { statusCode: 400, message: "no newArrivals for now, please add some." } }
             return {
                 statusCode: 200,
@@ -81,8 +81,8 @@ export class LandingpageService {
 
     async getBestSellers() {
         try {
-            const bestSeller = await this.dataSource.query(`select td.id as "order_id",t.id,t."name",'best' as new,ti.id as "product_image_id",
-            ti."front_side",ti."back_side",ti."left_side",ti."right_side",
+            const bestSeller = await this.dataSource.query(`select distinct on (t.name) td.id as "order_id",t.id,t."name",'best' as new,ti.id as "product_image_id",
+            ti."front_side",
             coalesce (cast(round(avg(tr.rating)) as int),5)  as rating, 
                         t.mrp ,t.selling_price,t.description ,
                         jsonb_build_object('OuterShell',t.code,'SKU',t.code,'color',t.color,'Lining',t.color) as Information
@@ -91,7 +91,7 @@ export class LandingpageService {
                              left join tblproduct_review tr on tr.product_id = t.id
                              left join tblorder_item tt on tt.product_id = t.id 
                              left join tblorder_details td on td.id = tt.order_id
-                             group by t.id,ti."id",td.id order by td.total desc limit 4`)
+                             group by t.id,ti."id",td.id order by t.name,td.total desc limit 4`)
             if (!bestSeller.length) { console.log("no bestSeller for now, please add some."); return { statusCode: 400, message: "no bestSeller for now, please add some." } }
             return {
                 statusCode: 200,

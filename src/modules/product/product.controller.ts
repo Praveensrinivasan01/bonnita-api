@@ -202,6 +202,18 @@ export class ProductController {
         return this.productService.productMapping(product_id);
     }
 
+    @Get('color-mapping/:product_id')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'To get the products with mapping' })
+    @ApiResponse({ status: 200, description: 'fetched all products with mapping Successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    async colorMapping(
+        @Param('product_id', ParseUUIDPipe) product_id: string
+    ) {
+        return this.productService.colorMapping(product_id);
+    }
+
     @Get('category-mapping')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'To get the category/subcategory with mapping' })
