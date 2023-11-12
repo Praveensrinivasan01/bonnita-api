@@ -125,6 +125,75 @@ export class OrderService {
 
     }
 
+    async getuserOrdersById(user_id, offset) {
+        try {
+
+            const order = await this.dataSource.query(`SELECT
+            tod.user_id AS user_id,
+            tod.id AS order_id,
+            SUM(ti.quantity) AS total_quantity,
+            tod.total,
+            tod.status,
+            TO_CHAR(tod.createdat::timestamp, 'mm-dd-yyyy') AS created_date,
+            (
+                SELECT DISTINCT ON (ti3.id) ti3.front_side
+                FROM tblorder_details tod2
+                JOIN tblorder_item ti2 ON tod2.id = ti2.order_id
+                JOIN tblproduct t ON t.id = ti2.product_id
+                JOIN tblproduct_image ti3 ON ti3.id = t.image_id
+                WHERE tod2.user_id = tod.user_id
+                LIMIT 1
+            ) AS front_side,
+            (
+                SELECT
+                    CASE
+                        WHEN COUNT(DISTINCT t.name) = 1 THEN json_build_array(MAX(t.name))
+                        ELSE json_agg(DISTINCT ts.name)
+                    END
+                FROM tblorder_details tod2
+                JOIN tblorder_item ti2 ON tod2.id = ti2.order_id
+                JOIN tblproduct t ON t.id = ti2.product_id
+                JOIN tblproduct_subcategory ts ON ts.id = t.subcategory_id
+                WHERE tod2.id = tod.id
+            ) AS product_name
+        FROM tblorder_details tod
+        JOIN tblorder_item ti ON tod.id = ti.order_id
+        WHERE tod.user_id = '${user_id}'
+        GROUP BY tod.user_id, tod.id, tod.total, tod.status, tod.createdat offset ${offset ? offset : 0} limit 15`);
+            return {
+                statusCode: 200,
+                message: "order updated successfully",
+                data: order
+            }
+
+        } catch (error) {
+            console.log(error)
+            return CommonService.error(error)
+        }
+    }
+
+    async getuserOrdersItemsById(order_id, offset) {
+        try {
+
+            const order = await this.dataSource.query(`select t.name,ti2.front_side ,ti.quantity ,ti.price ,ti.product_id ,ti.order_id ,
+            TO_CHAR(tod.createdat ::timestamp, 'mm-dd-yyyy') as created_date
+            from tblorder_details tod 
+            join tblorder_item ti  on ti.order_id  = tod.id
+            join tblproduct t on t.id = ti.product_id 
+            join tblproduct_image ti2 on ti2.id = t.image_id where tod.id='${order_id}' offset ${offset ? offset : 0} limit 15`);
+
+            return {
+                statusCode: 200,
+                message: "order updated successfully",
+                data: order
+            }
+
+        } catch (error) {
+            console.log(error)
+            return CommonService.error(error)
+        }
+    }
+
     async getuserOrders(offset) {
         try {
 
@@ -138,7 +207,7 @@ where td.createdat >= NOW() - INTERVAL '24 hours') as total_count
                 return {
                     statusCode: 200,
                     message: "order updated successfully",
-                    data: order[0].productdetails
+                    data: order
                 }
 
         } catch (error) {

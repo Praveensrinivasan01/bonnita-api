@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
 import { OrderService } from './order.service';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AddOrUpdateOrderDto } from 'src/dto/order.dto';
@@ -45,6 +45,26 @@ export class OrderController {
      async getOrder(@Query('offset') offset: string) {
          return await this.orderService.getuserOrders(offset);
      }
+
+    @Post('/get-order/:user_id')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'get order' })
+    @ApiResponse({ status: 200, description: 'get order status' })
+    @ApiResponse({ status: 400, description: 'get order status' })
+    @ApiResponse({ status: 500, description: 'Internal server error' })
+    async getuserOrdersById(@Query('offset') offset: string, @Param("user_id", ParseUUIDPipe) user_id: string) {
+        return await this.orderService.getuserOrdersById(user_id, offset);
+    }
+
+    @Post('/get-order-items/:order_id')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'get order' })
+    @ApiResponse({ status: 200, description: 'get order status' })
+    @ApiResponse({ status: 400, description: 'get order status' })
+    @ApiResponse({ status: 500, description: 'Internal server error' })
+    async getuserOrdersItemsById(@Query('offset') offset: string, @Param("order_id", ParseUUIDPipe) order_id: string) {
+        return await this.orderService.getuserOrdersItemsById(order_id, offset);
+    }
  
      @Post('/total-records')
      @HttpCode(HttpStatus.OK)

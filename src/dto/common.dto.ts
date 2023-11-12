@@ -1,5 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsNotEmpty, IsString } from "class-validator";
+import { IsEnum, IsNotEmpty, IsString, IsUUID } from "class-validator";
+import { UUID } from "crypto";
+import { ENUM_UserStatus } from "src/enum/common.enum";
 
 export class SignupUserDto {
 
@@ -106,6 +108,43 @@ export class ResetPasswordDto {
         example: 'hd77fd-cd8uy7u-c9duc',
     })
     user_id: string;
+}
+
+export class CouponDto {
+
+    @IsNotEmpty()
+    @IsString()
+    @ApiProperty({
+        description: 'New password',
+        example: 'Admin@123',
+    })
+    coupon_name: string;
+
+    @IsNotEmpty()
+    @ApiProperty({
+        description: 'Confirm new password',
+        example: 'Admin@123',
+    })
+    discount_percent: number;
+}
+
+export class ChangeCouponStatus {
+
+    @IsNotEmpty()
+    @IsEnum(ENUM_UserStatus)
+    @ApiProperty({
+        description: 'Coupon Status',
+        example: 'active',
+    })
+    status: ENUM_UserStatus;
+
+    @IsNotEmpty()
+    @IsUUID()
+    @ApiProperty({
+        description: 'coupon-id',
+        example: 'hd9-3ddh83-ndu33',
+    })
+    coupon_id: string;
 }
 
 export class ChangePasswordDto {

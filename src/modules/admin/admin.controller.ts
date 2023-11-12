@@ -1,6 +1,6 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { ChangePasswordDto, ForgotPasswordDto, LoginUserDto, ResetPasswordDto } from 'src/dto/common.dto';
+import { ChangeCouponStatus, ChangePasswordDto, CouponDto, ForgotPasswordDto, LoginUserDto, ResetPasswordDto } from 'src/dto/common.dto';
 import { AdminService } from './admin.service';
 
 @Controller('admin')
@@ -154,6 +154,48 @@ export class AdminController {
         @Query('offset') offset: string,
     ) {
         return this.adminService.getTopRecords(sort, offset);
+    }
+
+    @Get('get-all-coupons')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'To get all the ' })
+    @ApiResponse({ status: 200, description: 'fetched all products Successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    async getAllCoupon(
+        @Query('offset') offset: string,
+    ) {
+        return this.adminService.getAllCoupons(offset);
+    }
+
+    @Post('add-coupon')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'To reset the new password' })
+    @ApiResponse({ status: 200, description: 'Password Changed Successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    async AddCoupon(@Body() couponDto: CouponDto) {
+        return this.adminService.AddCoupon(couponDto);
+    }
+
+    @Post('change-coupon-status')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'To reset the new password' })
+    @ApiResponse({ status: 200, description: 'Password Changed Successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    async ChangeCouponStatus(@Body() changeCouponDto: ChangeCouponStatus) {
+        return this.adminService.changeCouponStatus(changeCouponDto);
+    }
+
+    @Post('delete-coupon/:coupon_id')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'To reset the new password' })
+    @ApiResponse({ status: 200, description: 'Password Changed Successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    async deleteCoupon(@Param('coupon_id', ParseUUIDPipe) coupon_id: string) {
+        return this.adminService.deleteCoupon(coupon_id);
     }
 
 }

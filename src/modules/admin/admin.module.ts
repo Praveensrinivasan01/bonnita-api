@@ -8,9 +8,10 @@ import { E_Token } from 'src/entities/token.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { E_ProductSubCategory } from 'src/entities/product-management/subcategory.entity';
 import { E_ProductCategory } from 'src/entities/product-management/category.entity';
+import { E_Coupon } from 'src/entities/order-management/coupon.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([E_Admin, E_Token, E_ProductSubCategory, E_ProductCategory]),
+  imports: [TypeOrmModule.forFeature([E_Admin, E_Token, E_ProductSubCategory, E_ProductCategory, E_Coupon]),
   JwtModule.register({
     secret: 'SecretKey',
     signOptions: {

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { ChangePasswordDto, ForgotPasswordDto, LoginUserDto, ResetPasswordDto } from 'src/dto/common.dto';
+import { ChangeCouponStatus, ChangePasswordDto, CouponDto, ForgotPasswordDto, LoginUserDto, ResetPasswordDto } from 'src/dto/common.dto';
 import { E_Admin } from 'src/entities/admin-management/admin.entity';
 import { E_Token } from 'src/entities/token.entity';
 import { DataSource, Repository } from 'typeorm';
@@ -9,6 +9,7 @@ import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { CommonService } from 'src/common/common.service';
 import { E_ProductSubCategory } from 'src/entities/product-management/subcategory.entity';
+import { E_Coupon } from 'src/entities/order-management/coupon.entity';
 
 @Injectable()
 export class AdminService {
@@ -17,6 +18,8 @@ export class AdminService {
         @InjectDataSource() private dataSource: DataSource,
         @InjectRepository(E_Admin)
         private adminRepository: Repository<E_Admin>,
+        @InjectRepository(E_Coupon)
+        private couponRepository: Repository<E_Coupon>,
         @InjectRepository(E_Token)
         private tokenRepository: Repository<E_Token>,
         // private readonly mailService: MailService
@@ -342,6 +345,100 @@ export class AdminService {
         } catch (error) {
             console.log(error);
             return CommonService.error(error);
+        }
+    }
+
+    async getAllCoupons(offset) {
+        try {
+            const coupons = await this.couponRepository.find({ skip: offset, take: 15 })
+
+            if (coupons.length) {
+                return {
+                    statusCode: 200,
+                    message: 'coupon fecthed successfully',
+                    data: coupons,
+                };
+            } else {
+                return {
+                    statusCode: 400,
+                    message: 'no coupons found',
+                };
+            }
+        } catch (error) {
+            console.log(error);
+            return CommonService.error(error);
+        }
+    }
+
+    async AddCoupon(addCouponDto: CouponDto) {
+        try {
+            let checkAdmin = await this.couponRepository.findOne({ where: { coupon_name: addCouponDto.coupon_name } })
+            if (!checkAdmin) {
+
+                const newCoupon = new E_Coupon();
+                newCoupon.coupon_name = addCouponDto.coupon_name;
+                newCoupon.discount_percent = addCouponDto.discount_percent;
+                const saveCoupon = await this.couponRepository.save(newCoupon)
+
+                return {
+                    statusCode: 200,
+                    message: "Coupon added successfully",
+                    data: saveCoupon
+                }
+            } else {
+                return {
+                    statusCode: 400,
+                    message: "Coupon already exists"
+                }
+            }
+        } catch (error) {
+            console.log(error)
+            return CommonService.error(error)
+        }
+    }
+
+    async changeCouponStatus(couponStatusDto: ChangeCouponStatus) {
+        try {
+            let checkAdmin = await this.couponRepository.findOne({ where: { id: couponStatusDto.coupon_id } })
+            if (checkAdmin) {
+
+                const updateCoupon = await this.couponRepository.update({ id: checkAdmin.id }, { status: couponStatusDto.status })
+
+                return {
+                    statusCode: 200,
+                    message: "Coupon status updated successfully",
+                    data: updateCoupon
+                }
+            } else {
+                return {
+                    statusCode: 400,
+                    message: "Coupon does not exists"
+                }
+            }
+        } catch (error) {
+            console.log(error)
+            return CommonService.error(error)
+        }
+    }
+
+    async deleteCoupon(coupon_id: string) {
+        try {
+            let checkAdmin = await this.couponRepository.findOne({ where: { id: coupon_id } })
+            if (checkAdmin) {
+                const deleteCoupon = await this.couponRepository.delete({ id: checkAdmin.id })
+                return {
+                    statusCode: 200,
+                    message: "Coupon deleted successfully"
+                }
+            } else {
+                return {
+                    statusCode: 400,
+                    message: "Coupon does not exists"
+                }
+            }
+        } catch (error) {
+            console.log(error)
+            return CommonService.error(error)
         }
     }
 }
