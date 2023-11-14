@@ -855,16 +855,58 @@ export class ProductService {
     }
   }
 
-  async shopMapping(category, subcategory, search, price: string, offset) {
-    console.log(category, subcategory, search, price, offset);
+  async shopMapping(category, subcategory, search, price: string, offset, type) {
+    console.log(category, subcategory, search, price, offset, type);
     let searchVariable = '';
     if (search && search != undefined) {
       searchVariable = `and (t."name" ilike '%${search}%' or t.code ilike  '%${search}%' )`;
     }
-
     try {
+
+      if (type == "'bestsellers'") {
+        console.log("type", type)
+        const shopItems = await this.dataSource
+          .query(`select distinct on (t.name) td.id as "order_id",t.id,t."name",'best' as new,ti.id as "product_image_id",t.code,
+    t.quantity ,t.description,t.features,t.category_id,t.subcategory_id,t.color,
+    t."size" ,t.mrp,t.selling_price,t.about,ti.front_side,
+    coalesce (cast(round(avg(tr.rating)) as int),5)  as total_rating
+         from tblproduct t  
+                     join tblproduct_image ti on ti.id = t.image_id 
+                     left join tblproduct_review tr on tr.product_id = t.id
+                     left join tblorder_item tt on tt.product_id = t.id 
+                     left join tblorder_details td on td.id = tt.order_id
+                     group by t.id,ti."id",td.id order by t.name,td.total desc`);
+
+        return {
+          statusCode: 200,
+          message: 'all products fetched successfully',
+          data: shopItems,
+        };
+      }
+
+      if (type == "'newarrivals'") {
+        console.log("type", type)
+
+        const shopItems = await this.dataSource
+          .query(`select distinct on (t.name) t.id,t."name",'new' as new,ti.id as product_image_id,ti."front_side",coalesce (cast(round(avg(tr.rating)) as int),5)  as total_rating, 
+         t.code,t.quantity ,t.description,t.features,t.category_id,t.subcategory_id,t.color,
+          t."size" ,t.mrp,t.selling_price,t.about,ti.front_side 
+          from tblproduct t  
+             join tblproduct_image ti on ti.id = t.image_id 
+             left join tblproduct_review tr on tr.product_id = t.id
+             group by t.id,ti."id",tr.product_id  order by t.name,t.createdat desc`);
+
+        return {
+          statusCode: 200,
+          message: 'all products fetched successfully',
+          data: shopItems,
+        };
+      }
+
+      if (type == "'all'") {
       const shopItems = await this.dataSource
-        .query(`select distinct on (t."name",t.selling_price) coalesce(round(avg(tr.rating)),5) as total_rating,t.id,t.name,t.code,t.quantity ,t.description,t.features,t.category_id,t.subcategory_id,t.color,
+        .query(`select distinct on (t."name",t.selling_price) coalesce(round(avg(tr.rating)),5) as total_rating,t.id,
+        t.name,t.code,t.quantity ,t.description,t.features,t.category_id,t.subcategory_id,t.color,
           t."size" ,t.mrp,t.selling_price,t.about,ti.front_side  
           from tblproduct t 
           join tblproduct_category tc on t.category_id = tc.id
@@ -897,6 +939,7 @@ export class ProductService {
         message: 'all products fetched successfully',
         data: shopItems,
       };
+      }
     } catch (error) {
       console.log(error);
       return CommonService.error(error);

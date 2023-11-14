@@ -9,6 +9,11 @@ export enum ENUM_PaymentStatus {
     Failure = 'failure'
 }
 
+export enum ENUM_Query {
+    COMPLETED = 'completed',
+    PENDING = 'pending',
+}
+
 export enum ENUM_Discount {
     PERCENT = 'percentage',
     AMOUNT = 'amount',

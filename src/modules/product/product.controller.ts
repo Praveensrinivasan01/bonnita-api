@@ -348,8 +348,9 @@ export class ProductController {
         @Query('search') search: string,
         @Query('price') price: string,
         @Query('offset') offset: string,
+        @Query('type') type: string,
     ) {
-        return this.productService.shopMapping(category, subcategory, search, price, offset);
+        return this.productService.shopMapping(category, subcategory, search, price, offset, type);
     }
 
 }

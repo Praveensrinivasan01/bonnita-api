@@ -1,5 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsNotEmpty, IsString } from "class-validator";
+import { IsEnum, IsNotEmpty, IsString } from "class-validator";
+import { ENUM_Query } from "src/enum/common.enum";
 
 export class QueryDto {
 
@@ -42,4 +43,23 @@ export class QueryDto {
     @IsNotEmpty()
     @IsString()
     comments: string;
+}
+
+export class UpdateQueryDto {
+
+    @ApiProperty({
+        description: 'Query-Id',
+        example: 'jjvh0-bchd8-88dvh',
+    })
+    @IsNotEmpty()
+    @IsString()
+    id: string;
+
+    @IsNotEmpty()
+    @IsEnum(ENUM_Query)
+    @ApiProperty({
+        description: '',
+        example: 'completed',
+    })
+    status: ENUM_Query;
 }

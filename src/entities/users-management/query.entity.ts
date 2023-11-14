@@ -1,10 +1,9 @@
 import { Exclude } from "class-transformer";
-import { ENUM_Flag } from "src/enum/common.enum";
+import { ENUM_Flag, ENUM_Query, ENUM_UserStatus } from "src/enum/common.enum";
 import { Column, Entity, CreateDateColumn, PrimaryGeneratedColumn, BaseEntity, Index } from "typeorm";
 
 
 @Entity('tblquery')
-@Index(["email"], { unique: true })
 export class E_Query extends BaseEntity {
 
     @PrimaryGeneratedColumn('uuid')
@@ -38,6 +37,13 @@ export class E_Query extends BaseEntity {
         default: ENUM_Flag.N
     })
     delete_flag: ENUM_Flag;
+
+    @Column({
+        type: 'enum',
+        enum: ENUM_Query,
+        default: ENUM_Query.PENDING
+    })
+    status: ENUM_Flag;
 
     @CreateDateColumn()
     createdat: string;
