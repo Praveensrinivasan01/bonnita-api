@@ -198,4 +198,14 @@ export class AdminController {
         return this.adminService.deleteCoupon(coupon_id);
     }
 
+    @Post('get-query-count')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'To reset the new password' })
+    @ApiResponse({ status: 200, description: 'Password Changed Successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    async getQueryCount() {
+        return this.adminService.getQueryCount();
+    }
+
 }

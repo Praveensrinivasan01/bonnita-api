@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { CommonService } from 'src/common/common.service';
-import { QueryDto } from 'src/dto/query.dto';
+import { QueryDto, UpdateQueryDto } from 'src/dto/query.dto';
 import { E_ProductCartItem } from 'src/entities/order-management/cart-item.entity';
 import { E_ProductCategory } from 'src/entities/product-management/category.entity';
 import { E_ProductFavourites } from 'src/entities/product-management/favourites.entity';
@@ -11,6 +11,7 @@ import { E_Product } from 'src/entities/product-management/product.entity';
 import { E_ProductReview } from 'src/entities/product-management/review.entity';
 import { E_ProductSubCategory } from 'src/entities/product-management/subcategory.entity';
 import { E_Query } from 'src/entities/users-management/query.entity';
+import { ENUM_Query } from 'src/enum/common.enum';
 import { DataSource, Repository } from 'typeorm';
 
 @Injectable()
@@ -135,6 +136,51 @@ export class LandingpageService {
             return {
                 statusCode: 200,
                 message: "query posted successfully",
+            }
+        } catch (error) {
+            console.log(error)
+            return CommonService.error(error)
+        }
+    }
+
+    async updateQuery(queryDto: UpdateQueryDto) {
+        try {
+
+            const checkQuery = await this.queryRepository.findOne({ where: { id: queryDto.id } })
+
+            if (!checkQuery) {
+                return {
+                    statusCode: 400,
+                    message: "no query found",
+                }
+            }
+
+            await this.queryRepository.update({ id: checkQuery.id }, { status: queryDto.status });
+
+            return {
+                statusCode: 200,
+                message: "query update successfully",
+            }
+        } catch (error) {
+            console.log(error)
+            return CommonService.error(error)
+        }
+    }
+
+    async getQuery(status, offset) {
+        try {
+            const query = await this.dataSource.query(`select * from tblquery where status = '${status}' offset ${offset ? offset : 0} limit 15 `)
+
+            if (!query.length) {
+                return {
+                    statusCode: 400,
+                    message: "no query found",
+                }
+            }
+            return {
+                statusCode: 200,
+                message: "query update successfully",
+                data: query
             }
         } catch (error) {
             console.log(error)

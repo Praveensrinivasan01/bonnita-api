@@ -441,6 +441,27 @@ export class AdminService {
             return CommonService.error(error)
         }
     }
+
+    async getQueryCount() {
+        try {
+            const query = await this.dataSource.query(`select count(*) from tblquery where status ='pending'`)
+
+            if (!query.length) {
+                return {
+                    statusCode: 400,
+                    message: "no query found",
+                }
+            }
+            return {
+                statusCode: 200,
+                message: "query update successfully",
+                data: query[0]
+            }
+        } catch (error) {
+            console.log(error)
+            return CommonService.error(error)
+        }
+    }
 }
 
 

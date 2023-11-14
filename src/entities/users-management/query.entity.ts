@@ -43,7 +43,7 @@ export class E_Query extends BaseEntity {
         enum: ENUM_Query,
         default: ENUM_Query.PENDING
     })
-    status: ENUM_Flag;
+    status: ENUM_Query;
 
     @CreateDateColumn()
     createdat: string;
