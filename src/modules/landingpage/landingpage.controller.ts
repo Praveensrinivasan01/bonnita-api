@@ -1,8 +1,9 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { LandingpageService } from './landingpage.service';
 import { QueryDto, UpdateQueryDto } from 'src/dto/query.dto';
-
+import { FileInterceptor } from '@nestjs/platform-express';
+import * as fs from 'fs';
 @Controller('landingpage')
 @ApiTags("LANDING PAGE")
 export class LandingpageController {
@@ -83,4 +84,47 @@ export class LandingpageController {
     }
 
 
+    @Post('upload-image')
+    @UseInterceptors(FileInterceptor('image'))
+    async uploadFile(@UploadedFile() file) {
+        console.log(file)
+        const imageData = fs.readFileSync(file.path);
+        const imageDataBase64 = "data:image/jpeg;base64," + imageData.toString('base64');
+        return await this.landingPageService.uploadImage(imageDataBase64, file)
+        return
+    }
+
+    @Post('get-banner-image')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'To get all the banner images' })
+    @ApiResponse({ status: 200, description: 'fetched all images Successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    async getBannerImage(
+        @Query("offset") offset: string
+    ) {
+        return this.landingPageService.getBannerImage(offset);
+    }
+
+    @Post('get-all-banner-image')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'To get all the banner images' })
+    @ApiResponse({ status: 200, description: 'fetched all images Successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    async getAllBannerImage() {
+        return this.landingPageService.getAllBannerImage();
+    }
+
+    @Post('delete-banner-image/:image_id')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'To get all the banner images' })
+    @ApiResponse({ status: 200, description: 'fetched all images Successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    async deleteBannerImage(
+        @Param("image_id") image_id: string
+    ) {
+        return this.landingPageService.deleteBannerImage(image_id);
+    }
 }

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { CommonService } from 'src/common/common.service';
 import { QueryDto, UpdateQueryDto } from 'src/dto/query.dto';
+import { E_BannerImage } from 'src/entities/landing-page/banner-image.entity';
 import { E_ProductCartItem } from 'src/entities/order-management/cart-item.entity';
 import { E_ProductCategory } from 'src/entities/product-management/category.entity';
 import { E_ProductFavourites } from 'src/entities/product-management/favourites.entity';
@@ -37,7 +38,9 @@ export class LandingpageService {
         @InjectRepository(E_ProductReview)
         private reviewRepository: Repository<E_ProductReview>,
         @InjectRepository(E_Query)
-        private queryRepository: Repository<E_Query>
+        private queryRepository: Repository<E_Query>,
+        @InjectRepository(E_BannerImage)
+        private bannerImageRepository: Repository<E_BannerImage>,
     ) { }
 
 
@@ -185,6 +188,87 @@ export class LandingpageService {
         } catch (error) {
             console.log(error)
             return CommonService.error(error)
+        }
+    }
+
+    async uploadImage(imageData, file) {
+        try {
+            const newImage = new E_BannerImage();
+            newImage.mimetype = file.mimetype;
+            newImage.size = file.size;
+            newImage.path = file.path;
+            newImage.imageData = imageData;
+
+            const saveImage = await this.bannerImageRepository.save(newImage);
+
+            console.log('saveImage', saveImage);
+            return {
+                statusCode: 200,
+                message: 'image saved successfully',
+                image: saveImage,
+            };
+        } catch (error) {
+            console.log(error);
+            return CommonService.error(error);
+        }
+    }
+
+    async getBannerImage(offset) {
+        try {
+            let bannerImage = []
+            bannerImage = await this.bannerImageRepository.find({ skip: offset, take: 15 })
+            return {
+                statusCode: 200,
+                data: bannerImage
+            }
+        } catch (error) {
+            console.log(error);
+            return CommonService.error(error);
+        }
+    }
+
+    async getAllBannerImage() {
+        try {
+            let bannerImage = []
+            bannerImage = await this.bannerImageRepository.find()
+            if (bannerImage.length) {
+                return {
+                    statusCode: 200,
+                    data: bannerImage
+                }
+            } else {
+                return {
+                    statusCode: 400,
+                    message: "no images found"
+                }
+            }
+
+        } catch (error) {
+            console.log(error);
+            return CommonService.error(error);
+        }
+    }
+
+    async deleteBannerImage(image_id) {
+        try {
+            const bannerImage = await this.bannerImageRepository.findOne({ where: { id: image_id } })
+
+            if (bannerImage) {
+                await this.bannerImageRepository.delete({ id: image_id })
+                return {
+                    statusCode: 200,
+                    message: "image deleted successfully"
+                }
+            } else {
+                return {
+                    statusCode: 400,
+                    message: "image id doesnot exists"
+                }
+            }
+
+        } catch (error) {
+            console.log(error);
+            return CommonService.error(error);
         }
     }
 
