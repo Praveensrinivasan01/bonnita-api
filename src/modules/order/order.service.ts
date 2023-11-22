@@ -226,7 +226,7 @@ where td.createdat >= NOW() - INTERVAL '24 hours') as total_count
                 'total_order',(select count(*) from tblorder_details),
                 'total_users', (select count(*) from tbluser),
                 'total_earned',(select coalesce(sum(total),0) as total_earned from tblorder_details where status ='DELIVERED'),
-                'last24hrs_order',(select count(*) from tblorder_details t where t.createdat >= NOW() - INTERVAL '24 hours')	
+                'last24hrs_order',(select count(*) from tblorder_details t where t.status ='DELIVERED')	
                 ) as total_records`);
 
             const last24hrs = await this.dataSource.query(`select TO_CHAR(td.createdat ::timestamp, 'mm-dd-yyyy') as created_date,td.*,concat(t.firstname,' ',t.lastname) as username,
