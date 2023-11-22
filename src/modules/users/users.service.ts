@@ -33,7 +33,7 @@ export class UsersService {
             if (Existuser.length == 0) {
                 user.firstname = signupUserDto.firstname;
                 user.lastname = signupUserDto.lastname;
-                user.mobile = signupUserDto.mobile;
+                user.mobile = `+91${signupUserDto.mobile}`;
                 user.email = signupUserDto.email;
                 //password hash
                 const salt = await bcrypt.genSalt();
