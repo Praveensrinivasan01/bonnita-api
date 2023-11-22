@@ -285,7 +285,7 @@ export class AdminService {
             if (sort == 'top_products') {
                 records = await this.dataSource.query(`select t.name as product_name,
                 t.code ,
-                sum(ti.quantity) as quantity
+                sum(ti.quantity) as quantity, sum(ti.price) as price
          from tblproduct t join tblorder_item ti on t.id = ti.product_id
          join tblorder_details td on td.id = ti.order_id 
          where td.status ='DELIVERED'

@@ -120,7 +120,7 @@ export class ProductController {
         return await this.productService.addCategory(addCategoryDto);
     }
 
-    @Put('update-category')
+    @Post('update-category')
     @HttpCode(HttpStatus.OK)
     @ApiBody({ type: AddorUpdateCategoryDto })
     @ApiResponse({ status: 200, description: 'Category updated successfully' })

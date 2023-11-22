@@ -187,7 +187,7 @@ export class UsersService {
                 newUser.address_line2 = address_line2;
                 newUser.city = city
                 newUser.zip_code = zip_code;
-                newUser.state = state;
+                newUser.state = state.trim().toUpperCase();
                 newUser.country = country;
                 newUser.user_id = user_id;
 
