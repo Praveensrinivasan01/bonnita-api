@@ -1,6 +1,6 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { AddWhyUsDto, ChangeCouponStatus, ChangeOrderStatus, ChangePasswordDto, CouponDto, ForgotPasswordDto, LoginUserDto, ResetPasswordDto } from 'src/dto/common.dto';
+import { AddWhyUsDto, ChangeCouponStatus, ChangeOrderStatus, ChangePasswordDto, CheckCouponDto, CouponDto, ForgotPasswordDto, LoginUserDto, ResetPasswordDto } from 'src/dto/common.dto';
 import { AdminService } from './admin.service';
 
 @Controller('admin')
@@ -178,6 +178,18 @@ export class AdminController {
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
     async AddCoupon(@Body() couponDto: CouponDto) {
         return this.adminService.AddCoupon(couponDto);
+    }
+
+    @Post('check-coupon')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'To get all the coupon ' })
+    @ApiResponse({ status: 200, description: 'fetched all products Successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    async getAllCoupons(
+        @Body() dto: CheckCouponDto
+    ) {
+        return this.adminService.checkCoupon(dto);
     }
 
     @Post('change-coupon-status')

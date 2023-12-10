@@ -128,6 +128,18 @@ export class CouponDto {
     discount_percent: number;
 }
 
+export class CheckCouponDto {
+
+    @IsNotEmpty()
+    @IsString()
+    @ApiProperty({
+        description: 'New password',
+        example: 'Admin@123',
+    })
+    coupon_name: string;
+
+}
+
 export class ChangeCouponStatus {
 
     @IsNotEmpty()

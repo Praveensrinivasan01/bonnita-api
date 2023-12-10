@@ -227,9 +227,8 @@ export class AdminService {
             if (search && search != undefined) {
                 searchVariable = ` and (t."firstname" ilike '%${search}%' or t."lastname" ilike '%${search}%'  or t."mobile" ilike '%${search}%'  or t."email" ilike '%${search}%' )`
             }
-
             const customers = await this.dataSource.query(`select t2.id as "order_id" ,concat(t.firstname,' ', t.lastname) as username,
-            t.email,TO_CHAR(t.createdat ::timestamp, 'mm-dd-yyyy') as created_date,
+            t.email,TO_CHAR(t2.createdat ::timestamp, 'mm-dd-yyyy') as created_date,
            t2.total,t2.quantity,t2.status 
            from tbluser t left join tblorder_details t2 on t2.user_id = t.id
            where  case when 'all' = '${status}' then t2.status in ('PENDING','PACKED','READYTOSHIP','ONTHEWAY','DELIVERED','RETURN','REFUNDED','CANCELLED')  
@@ -376,6 +375,28 @@ export class AdminService {
                 return {
                     statusCode: 200,
                     message: 'coupon fecthed successfully',
+                    data: coupons,
+                };
+            } else {
+                return {
+                    statusCode: 400,
+                    message: 'no coupons found',
+                };
+            }
+        } catch (error) {
+            console.log(error);
+            return CommonService.error(error);
+        }
+    }
+
+    async checkCoupon(dto) {
+        try {
+            const coupons = await this.couponRepository.find({ where: { coupon_name: dto.coupon_name } })
+
+            if (coupons.length) {
+                return {
+                    statusCode: 200,
+                    message: 'coupon applied successfully',
                     data: coupons,
                 };
             } else {
