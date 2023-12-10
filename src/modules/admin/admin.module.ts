@@ -9,9 +9,12 @@ import { JwtModule } from '@nestjs/jwt';
 import { E_ProductSubCategory } from 'src/entities/product-management/subcategory.entity';
 import { E_ProductCategory } from 'src/entities/product-management/category.entity';
 import { E_Coupon } from 'src/entities/order-management/coupon.entity';
+import { E_OrderDetails } from 'src/entities/order-management/order-details.entity';
+import { E_WhyUs } from 'src/entities/why-us/why-us.entity';
+import { E_User } from 'src/entities/users-management/users.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([E_Admin, E_Token, E_ProductSubCategory, E_ProductCategory, E_Coupon]),
+  imports: [TypeOrmModule.forFeature([E_Admin, E_Token, E_ProductSubCategory, E_ProductCategory, E_Coupon, E_OrderDetails, E_WhyUs, E_User]),
   JwtModule.register({
     secret: 'SecretKey',
     signOptions: {

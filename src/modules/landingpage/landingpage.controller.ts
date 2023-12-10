@@ -127,4 +127,14 @@ export class LandingpageController {
     ) {
         return this.landingPageService.deleteBannerImage(image_id);
     }
+
+    @Post('get-whyus-image')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'To get all the banner images' })
+    @ApiResponse({ status: 200, description: 'fetched all images Successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    async getWhyUs() {
+        return this.landingPageService.getWhyUsImage();
+    }
 }

@@ -15,6 +15,7 @@ import { E_Query } from 'src/entities/users-management/query.entity';
 import { E_ProductImage } from 'src/entities/product-management/product-image.entity';
 import { diskStorage } from 'multer';
 import { MulterModule } from '@nestjs/platform-express';
+import { E_WhyUs } from 'src/entities/why-us/why-us.entity';
 
 const storage = diskStorage({
   destination: './uploads',
@@ -24,7 +25,7 @@ const storage = diskStorage({
   },
 });
 @Module({
-  imports: [TypeOrmModule.forFeature([E_Product, E_ProductImage, E_Image, E_ProductFavourites, E_ProductCategory, E_ProductSubCategory, E_ProductCartItem, E_ProductReview, E_OrderDetails, E_Query, E_BannerImage]),
+  imports: [TypeOrmModule.forFeature([E_Product, E_ProductImage, E_Image, E_ProductFavourites, E_ProductCategory, E_ProductSubCategory, E_ProductCartItem, E_ProductReview, E_OrderDetails, E_Query, E_BannerImage, E_WhyUs]),
   MulterModule.register({ storage })],
   controllers: [LandingpageController],
   providers: [LandingpageService]

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { ChangeCouponStatus, ChangePasswordDto, CouponDto, ForgotPasswordDto, LoginUserDto, ResetPasswordDto } from 'src/dto/common.dto';
+import { AddWhyUsDto, ChangeCouponStatus, ChangeOrderStatus, ChangePasswordDto, CouponDto, ForgotPasswordDto, LoginUserDto, ResetPasswordDto } from 'src/dto/common.dto';
 import { E_Admin } from 'src/entities/admin-management/admin.entity';
 import { E_Token } from 'src/entities/token.entity';
 import { DataSource, Repository } from 'typeorm';
@@ -10,6 +10,9 @@ import * as crypto from 'crypto';
 import { CommonService } from 'src/common/common.service';
 import { E_ProductSubCategory } from 'src/entities/product-management/subcategory.entity';
 import { E_Coupon } from 'src/entities/order-management/coupon.entity';
+import { E_OrderDetails } from 'src/entities/order-management/order-details.entity';
+import { E_WhyUs } from 'src/entities/why-us/why-us.entity';
+import { E_User } from 'src/entities/users-management/users.entity';
 
 @Injectable()
 export class AdminService {
@@ -22,6 +25,12 @@ export class AdminService {
         private couponRepository: Repository<E_Coupon>,
         @InjectRepository(E_Token)
         private tokenRepository: Repository<E_Token>,
+        @InjectRepository(E_OrderDetails)
+        private orderRepository: Repository<E_OrderDetails>,
+        @InjectRepository(E_WhyUs)
+        private whyUsRepository: Repository<E_WhyUs>,
+        @InjectRepository(E_User)
+        private userRepository: Repository<E_User>,
         // private readonly mailService: MailService
         @InjectRepository(E_ProductSubCategory)
         protected subCategoryRepository: Repository<E_ProductSubCategory>,
@@ -211,17 +220,21 @@ export class AdminService {
 
     }
 
-    async getAllOrders(search, offset) {
+    async getAllOrders(search, offset, status) {
+        console.log("status", status)
         try {
             let searchVariable = '';
             if (search && search != undefined) {
-                searchVariable = ` where (t."firstname" ilike '%${search}%' or t."lastname" ilike '%${search}%'  or t."mobile" ilike '%${search}%'  or t."email" ilike '%${search}%' )`
+                searchVariable = ` and (t."firstname" ilike '%${search}%' or t."lastname" ilike '%${search}%'  or t."mobile" ilike '%${search}%'  or t."email" ilike '%${search}%' )`
             }
+
             const customers = await this.dataSource.query(`select t2.id as "order_id" ,concat(t.firstname,' ', t.lastname) as username,
             t.email,TO_CHAR(t.createdat ::timestamp, 'mm-dd-yyyy') as created_date,
            t2.total,t2.quantity,t2.status 
            from tbluser t left join tblorder_details t2 on t2.user_id = t.id
-           ${searchVariable} offset ${offset ? offset : 0} limit 15`)
+           where  case when 'all' = '${status}' then t2.status in ('PENDING','PACKED','READYTOSHIP','ONTHEWAY','DELIVERED','RETURN','REFUNDED','CANCELLED')  
+           else t2.status ='${status == 'all' ? 'PENDING' : status}' end 
+           ${searchVariable} order by t2.createdat desc offset ${offset ? offset : 0}  limit 15`)
             return {
                 statusCode: 200,
                 message: "fetched all orders",
@@ -236,7 +249,14 @@ export class AdminService {
 
     async getOrderDetails(order_id) {
         try {
-            const customers = await this.dataSource.query(`select * from tblorder_details td join tblorder_item ti on ti.order_id = td.id where td.id = '${order_id}'`)
+            const customers = await this.dataSource.query(`select ti.quantity,ti.price ,td.total ,td.quantity as total_quantity,td.mode_of_payment ,td.status ,
+            tua.room_no ,tua.address_line1 ,tua.address_line2 ,tua.city ,tua.country ,tua.zip_code,tua.state,
+            concat(tu.firstname,' ',tu.lastname) as username ,t."name"  from tblorder_details td 
+                 join tblorder_item ti on ti.order_id = td.id 
+                 join tbluser tu on tu.id = td.user_id
+                 join tbluser_address tua on tua.user_id::uuid = tu.id
+                 join tblproduct t on t.id = ti.product_id  
+            where td.id = '${order_id}'`)
             return {
                 statusCode: 200,
                 message: "fetched order successfully",
@@ -457,6 +477,86 @@ export class AdminService {
                 message: "query update successfully",
                 data: query[0]
             }
+        } catch (error) {
+            console.log(error)
+            return CommonService.error(error)
+        }
+    }
+
+    async changeOrderStatus(orderStatus: ChangeOrderStatus) {
+        try {
+            let checkAdmin = await this.orderRepository.findOne({ where: { id: orderStatus.order_id } })
+            if (checkAdmin) {
+                const user = await this.userRepository.findOne({ where: { id: checkAdmin.user_id } })
+                if (checkAdmin.status == "DELIVERED") {
+                    await this.userRepository.update({ id: checkAdmin.user_id }, { bonus_points: user.bonus_points - Math.floor(checkAdmin.total / 20) })
+                }
+                if (orderStatus.status == "DELIVERED") {
+                    await this.userRepository.update({ id: checkAdmin.user_id }, { bonus_points: user.bonus_points + Math.floor(checkAdmin.total / 20) })
+                }
+                const updateStatus = await this.orderRepository.update({ id: orderStatus.order_id }, { status: orderStatus.status })
+                return {
+                    statusCode: 200,
+                    message: "Order Status updated successfully",
+                    data: updateStatus
+                }
+            } else {
+                return {
+                    statusCode: 400,
+                    message: "Order does not exists"
+                }
+            }
+        } catch (error) {
+            console.log(error)
+            return CommonService.error(error)
+        }
+    }
+
+    async addWhyUs(addWhyUsDto: Omit<AddWhyUsDto, 'whyus_id'>) {
+        try {
+
+            await this.dataSource.query(`delete from tblwhyus`)
+
+            const newWhyUs = new E_WhyUs();
+            newWhyUs.image_id = addWhyUsDto.image_id
+            newWhyUs.left_content = addWhyUsDto.left_content
+            newWhyUs.right_content = addWhyUsDto.right_content
+
+            await this.whyUsRepository.save(newWhyUs)
+
+            return {
+                statusCode: 200,
+                message: "Why Us created successfully",
+                data: newWhyUs
+            }
+
+        } catch (error) {
+            console.log(error)
+            return CommonService.error(error)
+        }
+    }
+
+    async updateWhyUs(addWhyUsDto: AddWhyUsDto) {
+        try {
+            const check = await this.whyUsRepository.findOne({ where: { id: addWhyUsDto.whyus_id } })
+            if (!check) {
+                return {
+                    statusCode: 400,
+                    message: "Id doesnot exists",
+                }
+            }
+
+            const updateWhyUs = await this.whyUsRepository.update({ id: addWhyUsDto.whyus_id }, {
+                image_id: addWhyUsDto.image_id,
+                left_content: addWhyUsDto.left_content,
+                right_content: addWhyUsDto.right_content
+            })
+            return {
+                statusCode: 200,
+                message: "Why Us updated successfully",
+                data: updateWhyUs
+            }
+
         } catch (error) {
             console.log(error)
             return CommonService.error(error)

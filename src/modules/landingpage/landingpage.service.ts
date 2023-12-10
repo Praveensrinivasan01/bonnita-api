@@ -12,6 +12,7 @@ import { E_Product } from 'src/entities/product-management/product.entity';
 import { E_ProductReview } from 'src/entities/product-management/review.entity';
 import { E_ProductSubCategory } from 'src/entities/product-management/subcategory.entity';
 import { E_Query } from 'src/entities/users-management/query.entity';
+import { E_WhyUs } from 'src/entities/why-us/why-us.entity';
 import { ENUM_Query } from 'src/enum/common.enum';
 import { DataSource, Repository } from 'typeorm';
 
@@ -41,6 +42,8 @@ export class LandingpageService {
         private queryRepository: Repository<E_Query>,
         @InjectRepository(E_BannerImage)
         private bannerImageRepository: Repository<E_BannerImage>,
+        @InjectRepository(E_WhyUs)
+        private whyUsRepository: Repository<E_WhyUs>,
     ) { }
 
 
@@ -220,6 +223,20 @@ export class LandingpageService {
             return {
                 statusCode: 200,
                 data: bannerImage
+            }
+        } catch (error) {
+            console.log(error);
+            return CommonService.error(error);
+        }
+    }
+
+    async getWhyUsImage() {
+        try {
+            let whyUsImage = []
+            whyUsImage = await this.dataSource.query(`select tw.id,ti.front_side ,ti.back_side ,tw.left_content,tw.right_content,tw.image_id from tblproduct_image ti join tblwhyus tw on tw.image_id = ti.id  `)
+            return {
+                statusCode: 200,
+                data: whyUsImage
             }
         } catch (error) {
             console.log(error);

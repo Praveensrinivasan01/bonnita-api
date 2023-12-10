@@ -1,7 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsEnum, IsNotEmpty, IsString, IsUUID } from "class-validator";
 import { UUID } from "crypto";
-import { ENUM_UserStatus } from "src/enum/common.enum";
+import { ENUM_ORDER_STATUS, ENUM_UserStatus } from "src/enum/common.enum";
 
 export class SignupUserDto {
 
@@ -145,6 +145,59 @@ export class ChangeCouponStatus {
         example: 'hd9-3ddh83-ndu33',
     })
     coupon_id: string;
+}
+
+export class ChangeOrderStatus {
+
+    @IsNotEmpty()
+    @IsEnum(ENUM_ORDER_STATUS)
+    @ApiProperty({
+        description: 'Coupon Status',
+        example: 'active',
+    })
+    status: ENUM_ORDER_STATUS;
+
+    @IsNotEmpty()
+    @IsUUID()
+    @ApiProperty({
+        description: 'coupon-id',
+        example: 'hd9-3ddh83-ndu33',
+    })
+    order_id: string;
+}
+
+export class AddWhyUsDto {
+    @IsNotEmpty()
+    @IsString()
+    @ApiProperty({
+        description: 'Apartment No',
+        example: 'No.30',
+    })
+    whyus_id: string;
+
+    @IsNotEmpty()
+    @IsString()
+    @ApiProperty({
+        description: 'Apartment No',
+        example: 'No.30',
+    })
+    left_content: string;
+
+    @IsNotEmpty()
+    @IsString()
+    @ApiProperty({
+        description: 'Apartment No',
+        example: 'No.30',
+    })
+    image_id: string;
+
+    @IsNotEmpty()
+    @IsString()
+    @ApiProperty({
+        description: 'Address line 1',
+        example: 'Bonnita street',
+    })
+    right_content: string;
 }
 
 export class ChangePasswordDto {

@@ -1,6 +1,6 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { ChangeCouponStatus, ChangePasswordDto, CouponDto, ForgotPasswordDto, LoginUserDto, ResetPasswordDto } from 'src/dto/common.dto';
+import { AddWhyUsDto, ChangeCouponStatus, ChangeOrderStatus, ChangePasswordDto, CouponDto, ForgotPasswordDto, LoginUserDto, ResetPasswordDto } from 'src/dto/common.dto';
 import { AdminService } from './admin.service';
 
 @Controller('admin')
@@ -113,8 +113,10 @@ export class AdminController {
     async getAllOrders(
         @Query('offset') offset: string,
         @Query('search') search: string,
+        @Query('status') status: string,
     ) {
-        return this.adminService.getAllOrders(search, offset);
+        console.log("STATUS", status)
+        return this.adminService.getAllOrders(search, offset, status);
     }
 
     @Post('get-order-details/:order_id')
@@ -188,6 +190,16 @@ export class AdminController {
         return this.adminService.changeCouponStatus(changeCouponDto);
     }
 
+    @Post('change-order-status')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'To reset the new password' })
+    @ApiResponse({ status: 200, description: 'Password Changed Successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    async ChangeOrderStatus(@Body() changeOrderDto: ChangeOrderStatus) {
+        return this.adminService.changeOrderStatus(changeOrderDto);
+    }
+
     @Post('delete-coupon/:coupon_id')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'To reset the new password' })
@@ -208,4 +220,23 @@ export class AdminController {
         return this.adminService.getQueryCount();
     }
 
+    @Post('add-why-us')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'To add the dynamic content' })
+    @ApiResponse({ status: 200, description: 'Dynamic Content Successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    async addWhyUs(@Body() addWhyUsDto: Omit<AddWhyUsDto, 'whyus_id'>) {
+        return this.adminService.addWhyUs(addWhyUsDto);
+    }
+
+    @Post('update-why-us')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'To add the dynamic content' })
+    @ApiResponse({ status: 200, description: 'Dynamic Content Successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    async updateWhyUs(@Body() addWhyUsDto: AddWhyUsDto) {
+        return this.adminService.updateWhyUs(addWhyUsDto);
+    }
 }
