@@ -34,6 +34,8 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.0",
     "dotenv": "^16.3.1",
+    "mailjet-sendemail": "^1.1.4",
+    "node-mailjet": "^6.0.5",
     "pg": "^8.11.3",
     "postgres": "^3.3.5",
     "reflect-metadata": "^0.1.13",

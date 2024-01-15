@@ -13,13 +13,19 @@ export class E_Payment extends BaseEntity {
     order_id: string;
 
     @Column("uuid")
+    user_id: string;
+
+    @Column({ default: null })
+    cashfree_id: string
+
+    @Column({ default: 0 })
     amount: number;
 
-    @Column({
-        type: 'enum',
-        enum: ENUM_PaymentStatus,
-    })
-    status: ENUM_PaymentStatus;
+    @Column()
+    raw_response: string;
+
+    @Column({ default: null })
+    status: string;
 
     @CreateDateColumn()
     createdat: string;

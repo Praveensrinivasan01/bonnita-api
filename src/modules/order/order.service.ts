@@ -14,7 +14,9 @@ import { E_ProductImage } from 'src/entities/product-management/product-image.en
 import { E_Product } from 'src/entities/product-management/product.entity';
 import { E_ProductReview } from 'src/entities/product-management/review.entity';
 import { E_ProductSubCategory } from 'src/entities/product-management/subcategory.entity';
+import { E_User } from 'src/entities/users-management/users.entity';
 import { ENUM_ORDER_STATUS, ENUM_PAYMENT_METHOD } from 'src/enum/common.enum';
+import { MailService } from 'src/mail/mail.service';
 import { DataSource, Repository } from 'typeorm';
 
 @Injectable()
@@ -51,6 +53,9 @@ export class OrderService {
         private orderRepository: Repository<E_OrderDetails>,
         @InjectRepository(E_OrderItem)
         private orderItemRepository: Repository<E_OrderItem>,
+        @InjectRepository(E_User)
+        private userRepository: Repository<E_User>, 
+        private readonly mailService: MailService
     ) { }
 
 
@@ -58,9 +63,21 @@ export class OrderService {
         try {
             const { productdetails } = addOrUpdateOrder;
 
+            const existUser = await this.dataSource.query(`select * from tbluser where id ='${addOrUpdateOrder.user_id}'`)
+
+            if (!existUser.length) {
+                return {
+                    statusCode: 400,
+                    message: "User does not exists"
+                }
+            }
+
+            await this.userRepository.update({ id: addOrUpdateOrder.user_id }, { bonus_points: existUser[0].bonus_points - addOrUpdateOrder.bonus })
+
             const newOrder = new E_OrderDetails()
             newOrder.user_id = addOrUpdateOrder.user_id;
             newOrder.total = addOrUpdateOrder.total_amount;
+            newOrder.discount = addOrUpdateOrder.discount;
             newOrder.quantity = addOrUpdateOrder.quantity;
             newOrder.mode_of_payment = ENUM_PAYMENT_METHOD[addOrUpdateOrder.mode_of_payment]
             // newOrder.status = ENUM_ORDER_STATUS[addOrUpdateOrder.status];
@@ -84,7 +101,7 @@ export class OrderService {
 
 
             //Have to trigger a email
-
+            // await this.mailService.congratulations(saveOrder, existUser[0].firstname)
             return {
                 statusCode: 200,
                 message: "order created successfully",
@@ -127,7 +144,38 @@ export class OrderService {
 
     async getuserOrdersById(user_id, offset) {
         try {
-
+            const count = await this.dataSource.query(`SELECT
+            tod.user_id AS user_id,
+            tod.id AS order_id,
+            SUM(ti.quantity) AS total_quantity,
+            tod.total,
+            tod.status,
+            TO_CHAR(tod.createdat::timestamp, 'mm-dd-yyyy') AS created_date,
+            (
+                SELECT DISTINCT ON (ti3.id) ti3.front_side
+                FROM tblorder_details tod2
+                JOIN tblorder_item ti2 ON tod2.id = ti2.order_id
+                JOIN tblproduct t ON t.id = ti2.product_id
+                JOIN tblproduct_image ti3 ON ti3.id = t.image_id
+                WHERE tod2.user_id = tod.user_id
+                LIMIT 1
+            ) AS front_side,
+            (
+                SELECT
+                    CASE
+                        WHEN COUNT(DISTINCT t.name) = 1 THEN json_build_array(MAX(t.name))
+                        ELSE json_agg(DISTINCT ts.name)
+                    END
+                FROM tblorder_details tod2
+                JOIN tblorder_item ti2 ON tod2.id = ti2.order_id
+                JOIN tblproduct t ON t.id = ti2.product_id
+                JOIN tblproduct_subcategory ts ON ts.id = t.subcategory_id
+                WHERE tod2.id = tod.id
+            ) AS product_name
+        FROM tblorder_details tod
+        JOIN tblorder_item ti ON tod.id = ti.order_id
+        WHERE tod.user_id = '${user_id}'
+        GROUP BY tod.user_id, tod.id, tod.total, tod.status, tod.createdat`);
             const order = await this.dataSource.query(`SELECT
             tod.user_id AS user_id,
             tod.id AS order_id,
@@ -163,7 +211,8 @@ export class OrderService {
             return {
                 statusCode: 200,
                 message: "order updated successfully",
-                data: order
+                data: order,
+                count: count.length ?? 0
             }
 
         } catch (error) {
@@ -225,23 +274,32 @@ where td.createdat >= NOW() - INTERVAL '24 hours') as total_count
             const records = await this.dataSource.query(`select jsonb_build_object(
                 'total_order',(select count(*) from tblorder_details),
                 'total_users', (select count(*) from tbluser),
-                'total_earned',(select coalesce(sum(total),0) as total_earned from tblorder_details where status ='DELIVERED'),
+                'total_earned',(select coalesce(sum(td.total),0) as total_earned from tblorder_details td
+                left join tblpayment t2 on t2.user_id = td.user_id  
+                where (td.status ='DELIVERED' and td.mode_of_payment  ='CASHONDELIVERY') or 
+                      (td.mode_of_payment  ='E_PAY' and t2.status='PAID')),
                 'last24hrs_order',(select count(*) from tblorder_details t where t.status ='DELIVERED')	
                 ) as total_records`);
-
+            const count = await this.dataSource.query(`select TO_CHAR(td.createdat ::timestamp, 'mm-dd-yyyy') as created_date,td.*,concat(t.firstname,' ',t.lastname) as username,
+(select count(td.*)
+from tblorder_details td join tbluser t on t.id = td.user_id 
+where td.createdat >= NOW() - INTERVAL '24 hours') as total_count
+from tblorder_details td join tbluser t on t.id = td.user_id 
+                                              where td.createdat >= NOW() - INTERVAL '24 hours'`)
             const last24hrs = await this.dataSource.query(`select TO_CHAR(td.createdat ::timestamp, 'mm-dd-yyyy') as created_date,td.*,concat(t.firstname,' ',t.lastname) as username,
             (select count(td.*)
 from tblorder_details td join tbluser t on t.id = td.user_id 
 where td.createdat >= NOW() - INTERVAL '24 hours') as total_count
             from tblorder_details td join tbluser t on t.id = td.user_id 
-                                                          where td.createdat >= NOW() - INTERVAL '24 hours' offset ${offset ? offset : 0} limit 15`);
+                                                          where td.createdat >= NOW() - INTERVAL '24 hours' order by td.createdat desc offset ${offset ? offset : 0} limit 15`);
 
 
                 return {
                     statusCode: 200,
                     message: "order updated successfully",
                     data: records[0].total_records,
-                    last24hrs_record: last24hrs
+                    last24hrs_record: last24hrs,
+                    count: count.length ?? 0
                 }
 
         } catch (error) {
@@ -255,30 +313,24 @@ where td.createdat >= NOW() - INTERVAL '24 hours') as total_count
           const config = {
             method: 'GET',
             url: `https://sandbox.cashfree.com/pg/orders/${orderid}`,
-            headers :{
+            headers: {
               'Content-Type': 'application/json',
               'x-api-version': '2022-09-01',
               'x-client-id': process.env.APPKEY,
               'x-client-secret': process.env.SECRET_KEY,
-            }
-      
+            },
           };
-          let res
-          axios(config)
-            .then(function (response) {
-              console.log(response.data);
-               res=response.data
-            })
-            .catch(function (error) {
-              console.error(error);
-            });
+      
+          const response = await axios(config);
+          console.log(response.data);
+      
           return {
             statusCode: 200,
             message: 'all products fetched successfully',
-            data: res,
+            data: response.data,
           };
         } catch (error) {
-          console.log(error);
+          console.error(error);
           return CommonService.error(error);
         }
       }

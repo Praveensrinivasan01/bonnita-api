@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { AddWhyUsDto, ChangeCouponStatus, ChangeOrderStatus, ChangePasswordDto, CouponDto, ForgotPasswordDto, LoginUserDto, ResetPasswordDto } from 'src/dto/common.dto';
+import { AddWhyUsDto, ChangeCouponStatus, ChangeOrderStatus, ChangePasswordDto, CouponDto, ForgotPasswordDto, LoginUserDto, NewsLetterDto, ResetPasswordDto } from 'src/dto/common.dto';
 import { E_Admin } from 'src/entities/admin-management/admin.entity';
 import { E_Token } from 'src/entities/token.entity';
 import { DataSource, Repository } from 'typeorm';
@@ -13,6 +13,8 @@ import { E_Coupon } from 'src/entities/order-management/coupon.entity';
 import { E_OrderDetails } from 'src/entities/order-management/order-details.entity';
 import { E_WhyUs } from 'src/entities/why-us/why-us.entity';
 import { E_User } from 'src/entities/users-management/users.entity';
+import { MailService } from 'src/mail/mail.service';
+import { E_NewsLetter } from 'src/entities/admin-management/newsletter.entity';
 
 @Injectable()
 export class AdminService {
@@ -34,6 +36,9 @@ export class AdminService {
         // private readonly mailService: MailService
         @InjectRepository(E_ProductSubCategory)
         protected subCategoryRepository: Repository<E_ProductSubCategory>,
+        @InjectRepository(E_NewsLetter)
+        protected newsRepository: Repository<E_NewsLetter>,
+        private readonly mailService: MailService
     ) { }
 
     async signIn(loginUserDto: LoginUserDto) {
@@ -158,6 +163,9 @@ export class AdminService {
             if (search && search != undefined) {
                 searchVariable = ` where (tc."name" ilike '%${search}%' )`
             }
+            const count = await this.dataSource.query(`select tc."name",tc.description,ti."imageData",tc.id as category_id  
+            from tblproduct_category tc 
+            join tblimage ti on ti.id = tc.image_id ${searchVariable}`)
             const category = await this.dataSource.query(`select tc."name",tc.description,ti."imageData",tc.id as category_id  
             from tblproduct_category tc 
             join tblimage ti on ti.id = tc.image_id ${searchVariable}  offset ${offset ? offset : 0} limit 15`)
@@ -165,7 +173,8 @@ export class AdminService {
             return {
                 statusCode: 200,
                 message: "all category fetched successfully",
-                data: category
+                data: category,
+                count: count.length ?? 0
             }
         } catch (error) {
             console.log(error)
@@ -198,19 +207,29 @@ export class AdminService {
         try {
             let searchVariable = '';
             if (search && search != undefined) {
-                searchVariable = ` where (t."firstname" ilike '%${search}%' or t."lastname" ilike '%${search}%'  or t."mobile" ilike '%${search}%'  or t."email" ilike '%${search}%' )`
+                searchVariable = `and (t."firstname" ilike '%${search}%' or t."lastname" ilike '%${search}%'  or t."mobile" ilike '%${search}%'  or t."email" ilike '%${search}%' )`
             }
+            const count = await this.dataSource.query(`select t.id,concat(t.firstname,' ', t.lastname) as username,
+            t.email,t.mobile,TO_CHAR(t.createdat ::timestamp, 'mm-dd-yyyy') as created_date,
+            sum(case when t2.status ='DELIVERED' then  t2.total  else 0 end)  as total_sum,
+            sum(case when t2.status ='DELIVERED' then  t2.quantity  else 0 end)  as total_quantity
+           from tbluser t
+           left join tblorder_details t2 on t2.user_id = t.id
+           left join tblpayment tp on tp.order_id = t2.id ${searchVariable} 
+           group by t.id `)
             const customers = await this.dataSource.query(`select t.id,concat(t.firstname,' ', t.lastname) as username,
-           t.email,t.mobile,TO_CHAR(t.createdat ::timestamp, 'mm-dd-yyyy') as created_date,
-           coalesce(sum(t2.total),0) as total_sum,
-           coalesce(sum(t2.quantity), 0) as total_quantity
-          from tbluser t left join tblorder_details t2 on t2.user_id = t.id
-          ${searchVariable}
-          group by t.id offset ${offset ? offset : 0} limit 15`)
+            t.email,t.mobile,TO_CHAR(t.createdat ::timestamp, 'mm-dd-yyyy') as created_date,
+            sum(case when t2.status ='DELIVERED' then  t2.total  else 0 end)  as total_sum,
+            sum(case when t2.status ='DELIVERED' then  t2.quantity  else 0 end)  as total_quantity
+           from tbluser t
+           left join tblorder_details t2 on t2.user_id = t.id
+           left join tblpayment tp on tp.order_id = t2.id ${searchVariable} 
+           group by t.id offset ${offset ? offset : 0} limit 15`)
             return {
                 statusCode: 200,
                 message: "fetched all users",
-                customers
+                customers,
+                count: count.length ?? 0
             }
 
         } catch (error) {
@@ -227,6 +246,13 @@ export class AdminService {
             if (search && search != undefined) {
                 searchVariable = ` and (t."firstname" ilike '%${search}%' or t."lastname" ilike '%${search}%'  or t."mobile" ilike '%${search}%'  or t."email" ilike '%${search}%' )`
             }
+            const count = await this.dataSource.query(`select t2.id as "order_id" ,concat(t.firstname,' ', t.lastname) as username,
+            t.email,TO_CHAR(t2.createdat ::timestamp, 'mm-dd-yyyy') as created_date,
+           t2.total,t2.quantity,t2.status 
+           from tbluser t left join tblorder_details t2 on t2.user_id = t.id
+           where  case when 'all' = '${status}' then t2.status in ('PENDING','PACKED','READYTOSHIP','ONTHEWAY','DELIVERED','RETURN','REFUNDED','CANCELLED')  
+           else t2.status ='${status == 'all' ? 'PENDING' : status}' end 
+           ${searchVariable} order by t2.createdat desc`)
             const customers = await this.dataSource.query(`select t2.id as "order_id" ,concat(t.firstname,' ', t.lastname) as username,
             t.email,TO_CHAR(t2.createdat ::timestamp, 'mm-dd-yyyy') as created_date,
            t2.total,t2.quantity,t2.status 
@@ -237,7 +263,8 @@ export class AdminService {
             return {
                 statusCode: 200,
                 message: "fetched all orders",
-                customers
+                customers,
+                count: count.length ?? 0
             }
 
         } catch (error) {
@@ -275,6 +302,10 @@ export class AdminService {
             if (search && search != undefined) {
                 searchVariable = ` where (t."name" ilike '%${search}%' or t."code" ilike '%${search}%' or tc."name" ilike '%${search}%' or ts."name" ilike '%${search}%' )`
             }
+            const count = await this.dataSource.query(`select t.*,tc.name as categoryname,ts.name as subcategoryname 
+            from tblproduct t 
+            join tblproduct_category tc on tc.id = t.category_id 
+            join tblproduct_subcategory ts on ts.id = t.subcategory_id ${searchVariable} `)
           const products = await this.dataSource.query(`select t.*,tc.name as categoryname,ts.name as subcategoryname 
           from tblproduct t 
           join tblproduct_category tc on tc.id = t.category_id 
@@ -291,6 +322,7 @@ export class AdminService {
             statusCode: 200,
             message: 'all products fetched successfully',
             data: products,
+              count: count.length ?? 0
           };
         } catch (error) {
           console.log(error);
@@ -301,14 +333,26 @@ export class AdminService {
     async getTopRecords(sort, offset) {
         try {
             let records = []
+            let count = []
             if (sort == 'top_products') {
+                count = await this.dataSource.query(`select t.name as product_name,
+                t.code ,
+                sum(ti.quantity) as quantity, sum(ti.price) as price
+         from tblproduct t join tblorder_item ti on t.id = ti.product_id
+         join tblorder_details td on td.id = ti.order_id 
+    left join tblpayment tp on tp.order_id = td.id
+         where  (td.status ='DELIVERED' and td.mode_of_payment = 'CASHONDELIVERY') or
+                (td.mode_of_payment = 'E_PAY' and tp.status='PAID')
+         group by t.id order by quantity desc`)
                 records = await this.dataSource.query(`select t.name as product_name,
                 t.code ,
                 sum(ti.quantity) as quantity, sum(ti.price) as price
          from tblproduct t join tblorder_item ti on t.id = ti.product_id
          join tblorder_details td on td.id = ti.order_id 
-         where td.status ='DELIVERED'
-         group by t.id order by sum(ti.quantity) desc offset ${offset} limit 15`)
+    left join tblpayment tp on tp.order_id = td.id
+         where  (td.status ='DELIVERED' and td.mode_of_payment = 'CASHONDELIVERY') or
+                (td.mode_of_payment = 'E_PAY' and tp.status='PAID')
+         group by t.id order by quantity desc  offset ${offset} limit 15`)
                 if (!records.length) {
                     console.log('no top products for now');
                     return {
@@ -317,13 +361,24 @@ export class AdminService {
                     };
                 }
             } else if (sort == 'sales_by_location') {
-                records = await this.dataSource.query(`     select  sum(ti.quantity) as quantity,ta.state,sum(td.total) as total
+                count = await this.dataSource.query(`select  sum(ti.quantity) as quantity,ta.state,sum(td.total) as total
                 from  tblorder_item ti 
                 join tblorder_details td on td.id = ti.order_id
                 join tbluser_address ta on td.user_id = ta.user_id::uuid 
-                where td.status ='DELIVERED'
+                 left join tblpayment tp on tp.order_id = td.id
+                where (td.status ='DELIVERED' and td.mode_of_payment = 'CASHONDELIVERY') or 
+                      (td.mode_of_payment = 'E_PAY' and tp.status='PAID')
                 group by ta.state 
-                order by sum(td.total) desc offset ${offset} limit 15`)
+                order by total desc`)
+                records = await this.dataSource.query(`         select  sum(ti.quantity) as quantity,ta.state,sum(td.total) as total
+                from  tblorder_item ti 
+                join tblorder_details td on td.id = ti.order_id
+                join tbluser_address ta on td.user_id = ta.user_id::uuid 
+                 left join tblpayment tp on tp.order_id = td.id
+                where (td.status ='DELIVERED' and td.mode_of_payment = 'CASHONDELIVERY') or 
+                      (td.mode_of_payment = 'E_PAY' and tp.status='PAID')
+                group by ta.state 
+                order by total desc offset ${offset} limit 15`)
                 if (!records.length) {
                     console.log('no sales by location for now');
                     return {
@@ -332,13 +387,22 @@ export class AdminService {
                     };
                 }
             } else if (sort == 'top_customers') {
-                records = await this.dataSource.query(` select  concat(ta.firstname,' ',ta.lastname) as username ,sum(ti.quantity) as quantity,sum(td.total) as total
-                from  tblorder_item ti 
-                join tblorder_details td on td.id = ti.order_id
-                join tbluser ta on td.user_id = ta.id::uuid 
-                where td.status ='DELIVERED'
-                group by ta.id
-                order by sum(td.total) desc offset ${offset} limit 15`)
+                count = await this.dataSource.query(`select concat(tu.firstname,' ',tu.lastname) as username ,sum(td.quantity) as quantity,sum(td.total) as total
+                from tblorder_details td left join tblpayment t on t.order_id = td.id 
+                     join tbluser tu on tu.id = td.user_id 
+                where 
+                       td.user_id =tu.id
+                       and (td.status ='DELIVERED' and td.mode_of_payment = 'CASHONDELIVERY') or 
+                           (td.mode_of_payment = 'E_PAY' and t.status='PAID')
+                           group by tu.id order by total desc`)
+                records = await this.dataSource.query(`select concat(tu.firstname,' ',tu.lastname) as username ,sum(td.quantity) as quantity,sum(td.total) as total
+                from tblorder_details td left join tblpayment t on t.order_id = td.id 
+                     join tbluser tu on tu.id = td.user_id 
+                where 
+                       td.user_id =tu.id
+                       and (td.status ='DELIVERED' and td.mode_of_payment = 'CASHONDELIVERY') or 
+                           (td.mode_of_payment = 'E_PAY' and t.status='PAID')
+                           group by tu.id order by total desc offset ${offset} limit 15`)
                 if (!records.length) {
                     console.log('no top customers for now');
                     return {
@@ -353,6 +417,7 @@ export class AdminService {
                     statusCode: 200,
                     message: 'records successfully',
                     data: records,
+                    count: count.length ?? 0
                 };
             } else {
                 return {
@@ -576,6 +641,37 @@ export class AdminService {
                 statusCode: 200,
                 message: "Why Us updated successfully",
                 data: updateWhyUs
+            }
+
+        } catch (error) {
+            console.log(error)
+            return CommonService.error(error)
+        }
+    }
+
+    async newsLetterDto(addNewsLetter: NewsLetterDto) {
+        try {
+
+            const userEmail = await this.userRepository.find({ order: { createdat: "desc" } });
+            const news = await this.dataSource.query(`select * from tblnewsletter td where createdat >= current_date `)
+            if (news.length) {
+                return {
+                    statusCode: 400,
+                    message: "You already sent the newsletters today."
+                }
+            }
+            if (userEmail.length) {
+                for (let i = 0; i < userEmail.length; i++) {
+                    await this.mailService.newsLetter(userEmail[i], addNewsLetter)
+                }
+            }
+            const newsLetter = new E_NewsLetter();
+            newsLetter.createdat = new Date()
+            const create = await this.newsRepository.save(newsLetter)
+            console.log(create)
+            return {
+                statusCode: 200,
+                message: "News Letter sent successfully."
             }
 
         } catch (error) {

@@ -304,3 +304,15 @@ export class UserDetailsDto {
     })
     user_id: string;
 }
+
+
+
+export class NewsLetterDto {
+    @IsNotEmpty()
+    @IsString()
+    @ApiProperty({
+        description: 'Apartment No',
+        example: 'No.30',
+    })
+    content: string;
+}

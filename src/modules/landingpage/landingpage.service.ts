@@ -175,6 +175,7 @@ export class LandingpageService {
 
     async getQuery(status, offset) {
         try {
+            const count = await this.dataSource.query(`select * from tblquery where status = '${status}'`)
             const query = await this.dataSource.query(`select * from tblquery where status = '${status}' offset ${offset ? offset : 0} limit 15 `)
 
             if (!query.length) {
@@ -186,7 +187,8 @@ export class LandingpageService {
             return {
                 statusCode: 200,
                 message: "query update successfully",
-                data: query
+                data: query,
+                count: count.length ?? 0
             }
         } catch (error) {
             console.log(error)

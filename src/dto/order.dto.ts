@@ -28,6 +28,14 @@ export class AddOrUpdateOrderDto {
     @IsNotEmpty()
     mode_of_payment: string;
 
+    @ApiProperty({ description: 'payment code', example: 'pde7e-eygy87-dge7', })
+    @IsNotEmpty()
+    bonus: number;
+
+    @ApiProperty({ description: 'payment code', example: 'pde7e-eygy87-dge7', })
+    @IsNotEmpty()
+    discount: number;
+
     @ApiProperty({ description: 'order status', example: 'pde7e-eygy87-dge7', })
     @IsNotEmpty()
     status: string;

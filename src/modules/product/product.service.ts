@@ -563,7 +563,7 @@ export class ProductService {
   from tblproduct t where t.id= '${product_id}' `);
 
       const colormapping = await this.dataSource.query(`  select id,color,color_name  from tblproduct t where t.name in (select name from tblproduct t2 where t2.id = '${product_id}')`)
-
+      productMapping[0].productdetails[0]['front_side'] = productMapping[0].productdetails[0]['imageDetails'][0]['front_side']
       return {
         statusCode: 200,
         message: 'all product fetched successfully',

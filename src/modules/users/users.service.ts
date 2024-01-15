@@ -10,6 +10,7 @@ import { CommonService } from 'src/common/common.service';
 import { ChangePasswordDto, ForgotPasswordDto, LoginUserDto, ResetPasswordDto, SignupUserDto, UserDetailsDto } from 'src/dto/common.dto';
 import { E_UserAddress } from 'src/entities/users-management/user_address.entity';
 import { ENUM_Flag } from 'src/enum/common.enum';
+import { MailService } from 'src/mail/mail.service';
 
 @Injectable()
 export class UsersService {
@@ -22,7 +23,7 @@ export class UsersService {
         private tokenRepository: Repository<E_Token>,
         @InjectRepository(E_UserAddress)
         private userAddressRepository: Repository<E_UserAddress>,
-        // private readonly mailService: MailService
+        private readonly mailService: MailService
     ) { }
 
     async signUp(signupUserDto: SignupUserDto) {
@@ -43,15 +44,8 @@ export class UsersService {
                 user.createdat = new Date().toISOString().split('T')[0]
                 await this.userRepository.save(user)
 
-                // const mail = {
-                //     to: `${signupUserDto.email}`,
-                //     subject: 'From Kicks Tech PS',
-                //     from: 'praveensrinivasan2001@gmail.com',
-                //     text: 'welcome to great kicks tech',
-                //     html: '<h1>Hello</h1>',
-                // };
-
-                // await this.mailService.send(mail)
+                console.log()
+                await this.mailService.sendWelcomeEmail(5448139, user)
                 return {
                     statusCode: 200,
                     user: Existuser[0],
@@ -105,6 +99,7 @@ export class UsersService {
                 await this.tokenRepository.save(tokenEntity);
 
                 const link = `${process.env.FE_URL}reset-password?token=${resetToken}&id=${checkUser[0].id}`;
+                await this.mailService.forgotPassword(link, checkUser[0])
                 console.log("password reset link", link)
                 // this.mailService.passwordResetMail(forgotPasswordDto.email, link);
                 return {

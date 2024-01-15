@@ -13,10 +13,12 @@ import { E_ProductImage } from 'src/entities/product-management/product-image.en
 import { E_Product } from 'src/entities/product-management/product.entity';
 import { E_OrderDetails } from 'src/entities/order-management/order-details.entity';
 import { E_OrderItem } from 'src/entities/order-management/order-item.entity';
+import { E_User } from 'src/entities/users-management/users.entity';
+import { MailService } from 'src/mail/mail.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([E_Product, E_ProductImage, E_Image, E_ProductFavourites, E_ProductDiscount, E_ProductCategory, E_ProductSubCategory, E_ProductCartItem, E_ProductReview, E_OrderDetails, E_OrderItem]),],
+  imports: [TypeOrmModule.forFeature([E_Product, E_ProductImage, E_Image, E_ProductFavourites, E_ProductDiscount, E_ProductCategory, E_ProductSubCategory, E_ProductCartItem, E_ProductReview, E_OrderDetails, E_OrderItem, E_User]),],
   controllers: [OrderController],
-  providers: [OrderService]
+  providers: [OrderService, MailService]
 })
 export class OrderModule { }

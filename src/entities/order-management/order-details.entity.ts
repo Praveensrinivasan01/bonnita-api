@@ -38,6 +38,8 @@ export class E_OrderDetails extends BaseEntity {
     })
     status: ENUM_ORDER_STATUS;
 
+    @Column({ default: null })
+    cashfree_id: string;
 
     @CreateDateColumn()
     createdat: string;
