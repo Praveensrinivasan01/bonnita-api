@@ -271,6 +271,18 @@ export class ProductController {
         return this.productService.getAllCart(user_id);
     }
 
+    @Get('get-cart-count/:user_id')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'To get all the cart of a customer' })
+    @ApiResponse({ status: 200, description: 'fetched all cart Successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    async getAllCartCount(
+        @Param('user_id', ParseUUIDPipe) user_id: string
+    ) {
+        return this.productService.getAllCartCount(user_id);
+    }
+
     @Post('add-cart')
     @HttpCode(HttpStatus.OK)
     @ApiResponse({ status: 200, description: 'added to cart successfully' })

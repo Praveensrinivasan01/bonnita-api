@@ -757,6 +757,9 @@ export class ProductService {
         join tblproduct_image ti on ti.id = t2.image_id
         where t1.user_id = '${user_id}'`,
       );
+      const count = await this.dataSource.query(`select sum(t1.quantity) as "cart_quantity" from tblcartitem t1 
+      join tblproduct t2 on t2.id = t1.product_id
+      join tblproduct_image ti on ti.id = t2.image_id where t1.user_id = '${user_id}'`)
       if (!favourites.length) {
         console.log('no favourites for now, please add some.');
         return {
@@ -769,6 +772,7 @@ export class ProductService {
         statusCode: 200,
         message: 'removed from favourites',
         data: favourites,
+        count
       };
     } catch (error) {
       console.log(error);
@@ -776,6 +780,33 @@ export class ProductService {
     }
   }
 
+  async getAllCartCount(user_id: string) {
+    try {
+      const favourites = await this.dataSource.query(
+        `select ti.front_side,t1.quantity as "cart_quantity",t2.* from tblcartitem t1 
+        join tblproduct t2 on t2.id = t1.product_id
+        join tblproduct_image ti on ti.id = t2.image_id
+        where t1.user_id = '${user_id}'`,
+      );
+      if (!favourites.length) {
+        console.log('no favourites for now, please add some.');
+        return {
+          statusCode: 400,
+          message: 'no favourites for now, please add some.',
+          count: 0
+        };
+      }
+
+      return {
+        statusCode: 200,
+        message: 'removed from favourites',
+        count: favourites.length ?? 0,
+      };
+    } catch (error) {
+      console.log(error);
+      return CommonService.error(error);
+    }
+  }
   async addReview(reviewDto: AddReviewDto) {
     try {
       const review = await this.reviewRepository.findOne({

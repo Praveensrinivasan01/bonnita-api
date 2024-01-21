@@ -1,16 +1,21 @@
 import { Injectable } from '@nestjs/common';
+import axios from 'axios';
+import { TwilioService } from 'nestjs-twilio';
 import Mailjet, * as mailjet from 'node-mailjet';
+
 
 @Injectable()
 export class MailService {
     private mailjetClient: any;
 
-    constructor() {
+
+    constructor(private readonly twilioService: TwilioService) {
         this.mailjetClient = mailjet.Client.apiConnect(
             process.env.MAILJET_API_KEY,
             process.env.MAILJET_SECRET_KEY,
             {}
         );
+        // this.addCallerId()
     }
 
     async sendWelcomeEmail(campaignId: number, data) {
@@ -469,7 +474,6 @@ export class MailService {
             <p style="margin-bottom: 10px;"><strong>Order Details:</strong></p>
             <ul style="list-style-type: none; padding: 0;">
                 <li style="margin-bottom: 5px;"><strong>Order ID:</strong> ${data.order_id}</li>
-                <li style="margin-bottom: 5px;"><strong>Product:</strong> ${data.product_name}</li>
                 <li style="margin-bottom: 5px;"><strong>Quantity:</strong> ${data.quantity}</li>
                 <li style="margin-bottom: 5px;"><strong>Total Amount:</strong> ${data.price}</li>
             </ul>
@@ -512,4 +516,141 @@ export class MailService {
 
     }    
 
+
+    async sendOtp(message, numbers) {
+        const fast2SMSApiKey = process.env.SMS_API;
+        if (!fast2SMSApiKey) {
+            throw new Error('Fast2SMS API key not found in .env file');
+        }
+        // try {
+        //     const response = await axios.get(
+        //         `https://www.fast2sms.com/dev/bulkV2?authorization=nOyzMLGHr2Pfua608thw5xbps9JgYeN1vK7UVDZETBFmdlI4jSDln8Y9ZCpsdUNaG4tj3MRBwIOehugA&route=otp&variables_values=https://www.fast2sms.com/dev/bulkV2?authorization=nOyzMLGHr2Pfua608thw5xbps9JgYeN1vK7UVDZETBFmdlI4jSDln8Y9ZCpsdUNaG4tj3MRBwIOehugA&route=otp&variables_values=12345&flash=0&numbers=${"7358659556"}`)
+
+        //     // console.log(response.data);
+        // } catch (error) {
+        //     console.error('Error sending OTP:', error.response ? error.response.data : error.message);
+        // }
+    }
+
+
+
+    async addCallerId() {
+        const axios = require('axios');
+
+        const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
+        const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
+
+        const url = 'https://api.twilio.com/2010-04-01/Accounts/' + TWILIO_ACCOUNT_SID + '/OutgoingCallerIds.json';
+
+        const data = new URLSearchParams();
+        data.append('FriendlyName', 'venkatesh');
+        data.append('PhoneNumber', '+919360200359');
+
+        console.log("data", url)
+        axios.post(url, data, {
+            auth: {
+                username: TWILIO_ACCOUNT_SID,
+                password: TWILIO_AUTH_TOKEN
+            },
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            }
+        })
+            .then(response => {
+                console.log('Success:', response.data);
+            })
+            .catch(error => {
+                console.error('Error:', error.response ? error.response.data : error.message);
+            });
+
+    }
+
+
+    async complaintContent(data: any) {
+
+        const htmlContent = `
+        <body>
+        <div style="text-align: center; padding: 20px;">
+            <h2>${data.header}/h2>
+            <p>${data.content1}</p>
+            <p>${data.content2}</p>
+            
+            <p>Please review our refund policies to ensure that future refund requests align with our terms and conditions.</p>
+            
+            <p>If you have any questions or concerns, feel free to contact our customer support team.</p>
+    
+            <p>Thank you for your understanding.</p>
+        </div>
+    </body>
+    `
+
+        try {
+            const request = await this.mailjetClient
+                .post('send', { version: 'v3.1' }).request({
+                    Messages: [
+                        {
+                            From: {
+                                Email: 'bonnita3182@gmail.com',
+                                Name: 'Bonnita',
+                            },
+                            To: [
+                                {
+                                    Email: data.email,
+                                    Name: data.firstname,
+                                },
+                            ],
+                            HTMLPart: htmlContent,
+                            Subject: 'your order has been sent successfully.',
+                        },
+                    ],
+                })
+            console.log("Email sent successfully")
+            // console.log(request);
+            return request.body;
+        } catch (error) {
+            console.error(error.statusCode);
+            throw error;
+        }
+
+    }
+
+
 }
+// async sendSMS() {
+//     // const sendSms = await this.twilioService.client.messages.create({
+//     //     from: '+12059735299',
+//     //     to: '+917358659556',
+//     //     body: 'otp is 8948984984',
+//     // })
+//     const accountSid = 'ACb70849afede5bc0edb764da9f452dffc';
+//     const authToken = '9f10cc656a21edc37d9caff9c76c60fd';
+
+//     const twilioApiUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+
+//     const postData = new URLSearchParams({
+//         To: '+917358659556',
+//         From: '+12059735299',
+//         Body: 'your bonnita login otp is 84988484',
+//     });
+
+//     const axiosConfig = {
+//         headers: {
+//             'Content-Type': 'application/x-www-form-urlencoded',
+//             Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString('base64')}`,
+//         },
+//     };
+
+//     axios.post(twilioApiUrl, postData, axiosConfig)
+//         .then(response => {
+//             console.log('Twilio API Response:', response.data);
+//         })
+//         .catch(error => {
+//             console.error('Twilio API Error:', error.response ? error.response.data : error.message);
+//         });
+
+
+//     // sendSms.then((res) => {
+//     //     console.log("response for sms", res)
+//     // })
+//     return
+// }

@@ -261,4 +261,5 @@ export class AdminController {
     async newsLetterEmail(@Body() newsLetterDto: NewsLetterDto) {
         return this.adminService.newsLetterDto(newsLetterDto);
     }
+    
 }

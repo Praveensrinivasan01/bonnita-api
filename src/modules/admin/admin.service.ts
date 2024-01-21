@@ -250,14 +250,14 @@ export class AdminService {
             t.email,TO_CHAR(t2.createdat ::timestamp, 'mm-dd-yyyy') as created_date,
            t2.total,t2.quantity,t2.status 
            from tbluser t left join tblorder_details t2 on t2.user_id = t.id
-           where  case when 'all' = '${status}' then t2.status in ('PENDING','PACKED','READYTOSHIP','ONTHEWAY','DELIVERED','RETURN','REFUNDED','CANCELLED')  
+           where  case when 'all' = '${status}' then t2.status in ('PENDING','PACKED','READYTOSHIP','ONTHEWAY','DELIVERED','RETURN','REFUNDED','CANCELLED','RAISEDAREQUEST')  
            else t2.status ='${status == 'all' ? 'PENDING' : status}' end 
            ${searchVariable} order by t2.createdat desc`)
             const customers = await this.dataSource.query(`select t2.id as "order_id" ,concat(t.firstname,' ', t.lastname) as username,
             t.email,TO_CHAR(t2.createdat ::timestamp, 'mm-dd-yyyy') as created_date,
            t2.total,t2.quantity,t2.status 
            from tbluser t left join tblorder_details t2 on t2.user_id = t.id
-           where  case when 'all' = '${status}' then t2.status in ('PENDING','PACKED','READYTOSHIP','ONTHEWAY','DELIVERED','RETURN','REFUNDED','CANCELLED')  
+           where  case when 'all' = '${status}' then t2.status in ('PENDING','PACKED','READYTOSHIP','ONTHEWAY','DELIVERED','RETURN','REFUNDED','CANCELLED','RAISEDAREQUEST')  
            else t2.status ='${status == 'all' ? 'PENDING' : status}' end 
            ${searchVariable} order by t2.createdat desc offset ${offset ? offset : 0}  limit 15`)
             return {

@@ -24,12 +24,18 @@ export class E_OrderDetails extends BaseEntity {
     @Column({ default: 0 })
     quantity: number;
 
+    @Column({ default: 0 })
+    bonus: number;
+
     @Column({
         type: "enum",
         enum: ENUM_PAYMENT_METHOD,
         default: ENUM_PAYMENT_METHOD.COD
     })
     mode_of_payment: ENUM_PAYMENT_METHOD;
+
+    @Column({ default: 0 })
+    shipping_amount: number;
 
     @Column({
         type: "enum",
@@ -46,6 +52,9 @@ export class E_OrderDetails extends BaseEntity {
 
     @UpdateDateColumn()
     updatedat: string;
+
+    @Column({ type: "date", default: null })
+    payment_date: String
 
     @DeleteDateColumn()
     deletedat: string;

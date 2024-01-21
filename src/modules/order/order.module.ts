@@ -15,9 +15,16 @@ import { E_OrderDetails } from 'src/entities/order-management/order-details.enti
 import { E_OrderItem } from 'src/entities/order-management/order-item.entity';
 import { E_User } from 'src/entities/users-management/users.entity';
 import { MailService } from 'src/mail/mail.service';
+import { TwilioModule, TwilioService } from 'nestjs-twilio';
+import { E_RAISE_REQUEST } from 'src/entities/order-management/raise-request.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([E_Product, E_ProductImage, E_Image, E_ProductFavourites, E_ProductDiscount, E_ProductCategory, E_ProductSubCategory, E_ProductCartItem, E_ProductReview, E_OrderDetails, E_OrderItem, E_User]),],
+  imports: [TypeOrmModule.forFeature([E_Product, E_ProductImage, E_Image, E_ProductFavourites, E_ProductDiscount, E_ProductCategory, E_ProductSubCategory, E_ProductCartItem, E_ProductReview, E_OrderDetails, E_OrderItem, E_User, E_RAISE_REQUEST]),
+  TwilioModule.forRoot({
+    accountSid: process.env.TWILIO_ACCOUNT_SID,
+    authToken: process.env.TWILIO_AUTH_TOKEN,
+  }),
+  ],
   controllers: [OrderController],
   providers: [OrderService, MailService]
 })

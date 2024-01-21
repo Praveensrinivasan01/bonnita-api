@@ -35,11 +35,13 @@
     "class-validator": "^0.14.0",
     "dotenv": "^16.3.1",
     "mailjet-sendemail": "^1.1.4",
+    "nestjs-twilio": "^4.3.0",
     "node-mailjet": "^6.0.5",
     "pg": "^8.11.3",
     "postgres": "^3.3.5",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
+    "twilio": "^4.20.1",
     "typeorm": "^0.3.17"
   },
   "devDependencies": {

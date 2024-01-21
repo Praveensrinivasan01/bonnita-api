@@ -46,14 +46,25 @@ export class OrderController {
          return await this.orderService.getuserOrders(offset);
      }
 
+
     @Post('/get-order/:user_id')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'get order' })
     @ApiResponse({ status: 200, description: 'get order status' })
     @ApiResponse({ status: 400, description: 'get order status' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
-    async getuserOrdersById(@Query('offset') offset: string, @Param("user_id", ParseUUIDPipe) user_id: string) {
+    async deleteOrderById(@Query('offset') offset: string, @Param("user_id", ParseUUIDPipe) user_id: string) {
         return await this.orderService.getuserOrdersById(user_id, offset);
+    }
+
+    @Post('/delete-order/:order_id')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'get order' })
+    @ApiResponse({ status: 200, description: 'get order status' })
+    @ApiResponse({ status: 400, description: 'get order status' })
+    @ApiResponse({ status: 500, description: 'Internal server error' })
+    async getuserOrdersById(@Param("order_id", ParseUUIDPipe) order_id: string) {
+        return await this.orderService.deleteOrderById(order_id);
     }
 
     @Post('/get-order-items/:order_id')
@@ -89,5 +100,34 @@ export class OrderController {
          return this.orderService.getDetailpay(orderid);
      }
 
+    @Post('/raise-complaint')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'totsl record for dashboard' })
+    @ApiResponse({ status: 200, description: 'get total records' })
+    @ApiResponse({ status: 400, description: 'get total records' })
+    @ApiResponse({ status: 500, description: 'Internal server error' })
+    async raisedARequest(@Body() data: any) {
+        return await this.orderService.raisedARequest(data);
+    }
+
+    @Post('/update-complaint')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'totsl record for dashboard' })
+    @ApiResponse({ status: 200, description: 'get total records' })
+    @ApiResponse({ status: 400, description: 'get total records' })
+    @ApiResponse({ status: 500, description: 'Internal server error' })
+    async updateComplaint(@Body() data: any) {
+        return await this.orderService.raisedARequest(data);
+    }
+
+    @Post('/get-complaints/:order_id')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'total complaints for this order' })
+    @ApiResponse({ status: 200, description: 'get total records' })
+    @ApiResponse({ status: 400, description: 'get total records' })
+    @ApiResponse({ status: 500, description: 'Internal server error' })
+    async getComplaints(@Param('order_id') order_id: string) {
+        return await this.orderService.getComplaints(order_id);
+    }
 
 }

@@ -16,6 +16,10 @@ export class AddOrUpdateOrderDto {
     @IsNotEmpty()
     total_amount: number;
 
+    @ApiProperty({ description: 'total ', example: 3000, })
+    @IsNotEmpty()
+    shipping_amount: number;
+
     @ApiProperty({ description: 'quantity', example: 3, })
     @IsNotEmpty()
     quantity: number;

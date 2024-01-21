@@ -6,6 +6,7 @@ import { AddOrUpdateOrderDto } from 'src/dto/order.dto';
 import { E_ProductCartItem } from 'src/entities/order-management/cart-item.entity';
 import { E_OrderDetails } from 'src/entities/order-management/order-details.entity';
 import { E_OrderItem } from 'src/entities/order-management/order-item.entity';
+import { E_RAISE_REQUEST } from 'src/entities/order-management/raise-request.entity';
 import { E_ProductCategory } from 'src/entities/product-management/category.entity';
 import { E_ProductDiscount } from 'src/entities/product-management/discount.entity';
 import { E_ProductFavourites } from 'src/entities/product-management/favourites.entity';
@@ -15,7 +16,7 @@ import { E_Product } from 'src/entities/product-management/product.entity';
 import { E_ProductReview } from 'src/entities/product-management/review.entity';
 import { E_ProductSubCategory } from 'src/entities/product-management/subcategory.entity';
 import { E_User } from 'src/entities/users-management/users.entity';
-import { ENUM_ORDER_STATUS, ENUM_PAYMENT_METHOD } from 'src/enum/common.enum';
+import { ENUM_COMPLAINT_REASON, ENUM_ORDER_STATUS, ENUM_PAYMENT_METHOD, ENUM_RAISE_REQUEST } from 'src/enum/common.enum';
 import { MailService } from 'src/mail/mail.service';
 import { DataSource, Repository } from 'typeorm';
 
@@ -55,12 +56,15 @@ export class OrderService {
         private orderItemRepository: Repository<E_OrderItem>,
         @InjectRepository(E_User)
         private userRepository: Repository<E_User>, 
-        private readonly mailService: MailService
+        private readonly mailService: MailService,
+        @InjectRepository(E_RAISE_REQUEST)
+        private complaintRepository: Repository<E_RAISE_REQUEST>,
     ) { }
 
 
     async createOrder(addOrUpdateOrder: Omit<AddOrUpdateOrderDto, 'order_id'>) {
         try {
+            console.log("CREATE ORDER DTO", addOrUpdateOrder, addOrUpdateOrder.shipping_amount)
             const { productdetails } = addOrUpdateOrder;
 
             const existUser = await this.dataSource.query(`select * from tbluser where id ='${addOrUpdateOrder.user_id}'`)
@@ -72,33 +76,34 @@ export class OrderService {
                 }
             }
 
-            await this.userRepository.update({ id: addOrUpdateOrder.user_id }, { bonus_points: existUser[0].bonus_points - addOrUpdateOrder.bonus })
-
             const newOrder = new E_OrderDetails()
             newOrder.user_id = addOrUpdateOrder.user_id;
-            newOrder.total = addOrUpdateOrder.total_amount;
             newOrder.discount = addOrUpdateOrder.discount;
+            newOrder.bonus = addOrUpdateOrder.bonus
             newOrder.quantity = addOrUpdateOrder.quantity;
+            newOrder.shipping_amount = addOrUpdateOrder.shipping_amount;
             newOrder.mode_of_payment = ENUM_PAYMENT_METHOD[addOrUpdateOrder.mode_of_payment]
             // newOrder.status = ENUM_ORDER_STATUS[addOrUpdateOrder.status];
-        
-
-            console.log("newOrder", newOrder)
 
             const saveOrder = await this.orderRepository.save(newOrder);
             let saveOrderItem = [];
+            let totalAmount = 0;
             if (productdetails.length) {
                 productdetails.forEach((ele) => {
                     const newOrderItem = new E_OrderItem
                     newOrderItem.order_id = newOrder.id;
                     newOrderItem.product_id = ele.product_id;
                     newOrderItem.quantity = ele.quantity;
-                    newOrderItem.price = ele.price
+                    totalAmount += ele.price * ele.quantity;
+                    newOrderItem.price = ele.price * ele.quantity
                     saveOrderItem.push(newOrderItem);
                 })
                 await this.orderItemRepository.save(saveOrderItem)
             }
-
+            const total_amount = totalAmount - addOrUpdateOrder.discount + (addOrUpdateOrder.shipping_amount ?? 0) - (addOrUpdateOrder.bonus ?? 0)
+            await this.orderRepository.update({ id: saveOrder.id }, { total: total_amount });
+            // const updatedOrder = await this.orderItemRepository.findOne({ where: { id: saveOrder.id } })
+            await this.userRepository.update({ id: addOrUpdateOrder.user_id }, { bonus_points: existUser[0].bonus_points - addOrUpdateOrder.bonus })
 
             //Have to trigger a email
             // await this.mailService.congratulations(saveOrder, existUser[0].firstname)
@@ -207,7 +212,9 @@ export class OrderService {
         FROM tblorder_details tod
         JOIN tblorder_item ti ON tod.id = ti.order_id
         WHERE tod.user_id = '${user_id}'
-        GROUP BY tod.user_id, tod.id, tod.total, tod.status, tod.createdat offset ${offset ? offset : 0} limit 15`);
+        GROUP BY tod.user_id, tod.id, tod.total, tod.status, tod.createdat
+        order by tod.createdat desc
+        offset ${offset ? offset : 0} limit 15`);
             return {
                 statusCode: 200,
                 message: "order updated successfully",
@@ -224,17 +231,48 @@ export class OrderService {
     async getuserOrdersItemsById(order_id, offset) {
         try {
 
-            const order = await this.dataSource.query(`select t.name,ti2.front_side ,ti.quantity ,ti.price ,ti.product_id ,ti.order_id ,
-            TO_CHAR(tod.createdat ::timestamp, 'mm-dd-yyyy') as created_date
-            from tblorder_details tod 
-            join tblorder_item ti  on ti.order_id  = tod.id
-            join tblproduct t on t.id = ti.product_id 
-            join tblproduct_image ti2 on ti2.id = t.image_id where tod.id='${order_id}' offset ${offset ? offset : 0} limit 15`);
+            const order = await this.dataSource.query(`select t.name,ti2.front_side ,ti.quantity ,ti.price ,ti.product_id ,ti.order_id ,tod.total,tod.quantity as total_quantity ,
+            tod.discount ,tod.shipping_amount,
+           TO_CHAR(tod.createdat ::timestamp, 'mm-dd-yyyy') as created_date,tod.status,
+           concat(t2.firstname,' ',t2.lastname) as username,ta.room_no ,ta.address_line1 ,ta.address_line2,
+           ta.city ,ta.zip_code ,ta.state ,ta.country ,TO_CHAR(tod.updatedat  ::timestamp, 'mm-dd-yyyy') as updated_at,
+           t3.cashfree_id ,t3.amount ,t3.status ,t3.raw_response ,
+           t2.mobile , t2.email ,tod.mode_of_payment,
+           (select sum(t4.selling_price) 
+           from tblorder_details td3 
+           join tblorder_item ti4 on ti4.order_id  = td3.id
+           join tblproduct t4 on t4.id = ti4.product_id 
+           where ti4.order_id = tod.id) as order_total
+           from tblorder_details tod 
+           join tbluser t2 on t2.id = tod.user_id 
+           left join tbluser_address ta on ta.user_id::uuid= t2.id
+           left join tblpayment t3 on t3.order_id  = tod.id
+           join tblorder_item ti  on ti.order_id  = tod.id
+           join tblproduct t on t.id = ti.product_id 
+           join tblproduct_image ti2 on ti2.id = t.image_id where tod.id='${order_id}'`);
+
+            const paymentInformation = await this.dataSource.query(`select  tod.total,tod.quantity as total_quantity ,
+           tod.discount ,tod.shipping_amount,
+           tod.bonus,
+           tod.total ,
+           TO_CHAR(tod.createdat ::timestamp, 'mm-dd-yyyy') as created_date,
+           TO_CHAR(t3.createdat  ::timestamp, 'mm-dd-yyyy') as e_pay_date,
+           TO_CHAR(tod.updatedat  ::timestamp, 'mm-dd-yyyy') as updated_at ,tod.mode_of_payment,
+           t3.status as payment_status,tod.status,
+           tod.payment_date,
+           t3.amount ,t3.cashfree_id ,t3.raw_response ,
+           sum(ti.price) as order_total
+           from tblorder_details tod 
+           left join tblpayment t3 on t3.order_id  = tod.id
+           join tblorder_item ti  on ti.order_id  = tod.id
+           where tod.id ='${order_id}' 
+           group by tod.id,t3.order_id,t3.amount ,t3.cashfree_id,t3.raw_response,t3.status,e_pay_date  `)
 
             return {
                 statusCode: 200,
                 message: "order updated successfully",
-                data: order
+                data: order,
+                payments: paymentInformation
             }
 
         } catch (error) {
@@ -335,7 +373,144 @@ where td.createdat >= NOW() - INTERVAL '24 hours') as total_count
         }
       }
     
+    async raisedARequest(data) {
+        try {
+            const order = await this.orderRepository.findOne({ where: { id: data.order_id } });
+            if (!order) {
+                return {
+                    statusCode: 400,
+                    message: "No order id found"
+                }
+            }
+            const compaints = await this.complaintRepository.findOne({ where: { order_id: data.order_id, user_id: data.user_id, complaint_type: data.complaint_type } })
+            if (compaints) {
+                if (compaints.status == ENUM_RAISE_REQUEST.PENDING) {
+                    return {
+                        statusCode: 400,
+                        message: "Complaint has been already raised for this order, please contact bonnita"
+                    }
+                }
+            }
 
+
+            const newComplaint = new E_RAISE_REQUEST()
+            newComplaint.order_id = data.order_id;
+            newComplaint.user_id = data.user_id;
+            newComplaint.reason = data.reason;
+            newComplaint.complaint_type = data.complaint_type;
+            newComplaint.image_id = data.image_id
+
+            const saveComplaint = await this.complaintRepository.save(newComplaint)
+            const updateOrder = await this.orderRepository.update({ id: order.id }, { status: ENUM_ORDER_STATUS.RAISEDAREQUEST });
+
+            return {
+                message: "Complaint has been raised. Bonnita team will be contact you.",
+                statusCode: 200,
+                saveComplaint,
+                updateOrder
+            }
+
+        } catch (error) {
+            console.error(error);
+            return CommonService.error(error);
+        }
+    }
+
+    async getComplaints(order_id) {
+        try {
+            const compaints = await this.complaintRepository.findOne({ where: { order_id: order_id } });
+            if (compaints) {
+                const getImages = await this.imageRepository.findOne({ where: { id: compaints.image_id } })
+                return {
+                    message: "Complaints found for this order",
+                    statusCode: 200,
+                    compaints,
+                    image: getImages ? getImages : {}
+                }
+            } else {
+                return {
+                    statusCode: 400,
+                    message: "No complaints found"
+                }
+            }
+
+
+        } catch (error) {
+            console.error(error);
+            return CommonService.error(error);
+        }
+    }
+
+    async updateComplaint(data) {
+        try {
+            const order = await this.orderRepository.findOne({ where: { id: data.order_id } });
+            const user = await this.userRepository.findOne({ where: { id: order.user_id } })
+            if (!order) {
+                return {
+                    statusCode: 400,
+                    message: "No order id found"
+                }
+            }
+            const compaints = await this.complaintRepository.findOne({ where: { order_id: data.order_id } })
+            if (compaints.status == "PENDING") {
+                const updateComplaint = await this.complaintRepository.update({ order_id: data.order_id }, { status: data.status, response: data.response });
+                let mailBody = {
+                    email: user.email,
+                    firstname: user.firstname,
+                    header: "",
+                    content1: "",
+                    content2: "",
+                    content3: ""
+                }
+                if (data.status === "REJECTED") {
+                    mailBody.header = `Your ${compaints.complaint_type} Has Been Cancelled`
+                    mailBody.content1 = `We regret to inform you that your ${compaints.complaint_type} request has been cancelled because it does not meet our ${compaints.complaint_type} policies.`
+                    mailBody.content2 = `For further details contact Bonnita3182@gmail.com`
+                    mailBody.content3 = data.response
+                } else if (data.status === "APPROVED") {
+                    mailBody.header = `Your ${compaints.complaint_type} Has Been Approved`
+                    mailBody.content1 = `We are pleased to inform you that your ${compaints.complaint_type} request has been approved based on our ${compaints.complaint_type} policies.`
+                    mailBody.content3 = data.response
+                    mailBody.content2 = compaints.complaint_type == ENUM_COMPLAINT_REASON.RETURN ? "Your order will be returned with in 5-7 working days, Bonnita will be in contact with you!."
+                        : "Your order will be refunded with in 5-7 working days, Bonnita will be in contact with you!."
+                }
+                await this.mailService.complaintContent(data)
+                return {
+                    statusCode: 200,
+                    message: "Complaint has been updated successfully."
+                }
+            }
+
+        } catch (error) {
+            console.error(error);
+            return CommonService.error(error);
+        }
+    }
+
+    async deleteOrderById(order_id: string) {
+        try {
+
+            const order = await this.orderRepository.findOne({ where: { id: order_id } });
+            if (!order) {
+                return {
+                    message: "No orders found",
+                    statusCode: 400
+                }
+
+            }
+            await this.orderRepository.delete({ id: order.id });
+            return {
+                message: "Order deleted successfully",
+                statusCode: 200
+            }
+        } catch (error) {
+            console.log(error)
+            return {
+                statusCode: 400,
+                message: "Error in delete"
+            }
+        }
+    }
 
 
 }
