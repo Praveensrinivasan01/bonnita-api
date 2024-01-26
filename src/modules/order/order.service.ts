@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Query } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import axios from 'axios';
 import { CommonService } from 'src/common/common.service';
@@ -79,6 +79,7 @@ export class OrderService {
             const newOrder = new E_OrderDetails()
             newOrder.user_id = addOrUpdateOrder.user_id;
             newOrder.discount = addOrUpdateOrder.discount;
+            newOrder.total = addOrUpdateOrder.total_amount
             newOrder.bonus = addOrUpdateOrder.bonus
             newOrder.quantity = addOrUpdateOrder.quantity;
             newOrder.shipping_amount = addOrUpdateOrder.shipping_amount;
@@ -87,22 +88,39 @@ export class OrderService {
 
             const saveOrder = await this.orderRepository.save(newOrder);
             let saveOrderItem = [];
+            let updateQuantityArray = { query: "" };
             let totalAmount = 0;
             if (productdetails.length) {
-                productdetails.forEach((ele) => {
+                for (let ele = 0; ele < productdetails.length; ele++) {
+                    const product = await this.productRepository.findOne({ where: { id: productdetails[ele].product_id } });
+                    if (product.quantity < productdetails[ele].quantity) {
+                        await this.orderRepository.delete({ id: saveOrder.id });
+                        return {
+                            statusCode: 400,
+                            message: "The quantity is exceed for this product, please check and order again.",
+                            product
+                        }
+                    } else {
+                        updateQuantityArray['query'] += `update tblproduct set quantity = ${product['quantity'] - productdetails[ele].quantity} where id ='${product.id}';`
+                    }
+
                     const newOrderItem = new E_OrderItem
                     newOrderItem.order_id = newOrder.id;
-                    newOrderItem.product_id = ele.product_id;
-                    newOrderItem.quantity = ele.quantity;
-                    totalAmount += ele.price * ele.quantity;
-                    newOrderItem.price = ele.price * ele.quantity
+                    newOrderItem.product_id = productdetails[ele].product_id;
+                    newOrderItem.quantity = productdetails[ele].quantity;
+                    totalAmount += productdetails[ele].price * productdetails[ele].quantity;
+                    newOrderItem.price = productdetails[ele].price * productdetails[ele].quantity
                     saveOrderItem.push(newOrderItem);
-                })
-                await this.orderItemRepository.save(saveOrderItem)
+                }
+
+
+
+                await this.orderItemRepository.save(saveOrderItem);
+
+                await this.dataSource.query(updateQuantityArray['query'])
             }
             const total_amount = totalAmount - addOrUpdateOrder.discount + (addOrUpdateOrder.shipping_amount ?? 0) - (addOrUpdateOrder.bonus ?? 0)
             await this.orderRepository.update({ id: saveOrder.id }, { total: total_amount });
-            // const updatedOrder = await this.orderItemRepository.findOne({ where: { id: saveOrder.id } })
             await this.userRepository.update({ id: addOrUpdateOrder.user_id }, { bonus_points: existUser[0].bonus_points - addOrUpdateOrder.bonus })
 
             //Have to trigger a email
@@ -236,7 +254,7 @@ export class OrderService {
            TO_CHAR(tod.createdat ::timestamp, 'mm-dd-yyyy') as created_date,tod.status,
            concat(t2.firstname,' ',t2.lastname) as username,ta.room_no ,ta.address_line1 ,ta.address_line2,
            ta.city ,ta.zip_code ,ta.state ,ta.country ,TO_CHAR(tod.updatedat  ::timestamp, 'mm-dd-yyyy') as updated_at,
-           t3.cashfree_id ,t3.amount ,t3.status ,t3.raw_response ,
+           t3.cashfree_id ,t3.amount ,t3.status as "payment_status" ,t3.raw_response ,
            t2.mobile , t2.email ,tod.mode_of_payment,
            (select sum(t4.selling_price) 
            from tblorder_details td3 
@@ -453,7 +471,9 @@ where td.createdat >= NOW() - INTERVAL '24 hours') as total_count
             }
             const compaints = await this.complaintRepository.findOne({ where: { order_id: data.order_id } })
             if (compaints.status == "PENDING") {
-                const updateComplaint = await this.complaintRepository.update({ order_id: data.order_id }, { status: data.status, response: data.response });
+                data.response  = data?.response ? data?.response:""
+                const updateComplaint = await this.complaintRepository.update({ order_id: data.order_id }, { status: data.status=="REJECTED" ? ENUM_RAISE_REQUEST.REJECTED:ENUM_RAISE_REQUEST.APPROVED, response: data.response});
+                console.log("updateComplaint",updateComplaint)
                 let mailBody = {
                     email: user.email,
                     firstname: user.firstname,
@@ -474,7 +494,7 @@ where td.createdat >= NOW() - INTERVAL '24 hours') as total_count
                     mailBody.content2 = compaints.complaint_type == ENUM_COMPLAINT_REASON.RETURN ? "Your order will be returned with in 5-7 working days, Bonnita will be in contact with you!."
                         : "Your order will be refunded with in 5-7 working days, Bonnita will be in contact with you!."
                 }
-                await this.mailService.complaintContent(data)
+                await this.mailService.complaintContent(mailBody)
                 return {
                     statusCode: 200,
                     message: "Complaint has been updated successfully."
@@ -489,8 +509,14 @@ where td.createdat >= NOW() - INTERVAL '24 hours') as total_count
 
     async deleteOrderById(order_id: string) {
         try {
-
+            const orderItems = await this.dataSource.query(`select * from tblorder_item ti where ti.order_id='${order_id}'`)
             const order = await this.orderRepository.findOne({ where: { id: order_id } });
+            if (orderItems.length) {
+                for (let i = 0; i < orderItems.length; i++) {
+                    const product = await this.productRepository.findOne({ where: { id: orderItems[i].product_id } })
+                    await this.productRepository.update({ id: orderItems[i].id }, { quantity: product.quantity + orderItems[i].quantity })
+                }
+            }
             if (!order) {
                 return {
                     message: "No orders found",

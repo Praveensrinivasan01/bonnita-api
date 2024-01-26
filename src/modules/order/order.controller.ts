@@ -117,7 +117,7 @@ export class OrderController {
     @ApiResponse({ status: 400, description: 'get total records' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     async updateComplaint(@Body() data: any) {
-        return await this.orderService.raisedARequest(data);
+        return await this.orderService.updateComplaint(data);
     }
 
     @Post('/get-complaints/:order_id')

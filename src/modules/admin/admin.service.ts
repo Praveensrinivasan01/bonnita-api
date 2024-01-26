@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { AddWhyUsDto, ChangeCouponStatus, ChangeOrderStatus, ChangePasswordDto, CouponDto, ForgotPasswordDto, LoginUserDto, NewsLetterDto, ResetPasswordDto } from 'src/dto/common.dto';
+import { AddWhyUsDto, ChangeCouponStatus, ChangeOrderStatus, ChangePasswordDto, CouponDto, ForgotPasswordDto, LoginUserDto, NewsLetterDto, ResetPasswordDto, UserCouponDto } from 'src/dto/common.dto';
 import { E_Admin } from 'src/entities/admin-management/admin.entity';
 import { E_Token } from 'src/entities/token.entity';
 import { DataSource, Repository } from 'typeorm';
@@ -15,6 +15,9 @@ import { E_WhyUs } from 'src/entities/why-us/why-us.entity';
 import { E_User } from 'src/entities/users-management/users.entity';
 import { MailService } from 'src/mail/mail.service';
 import { E_NewsLetter } from 'src/entities/admin-management/newsletter.entity';
+import { E_Product } from 'src/entities/product-management/product.entity';
+import { E_UserCoupon } from 'src/entities/users-management/usercoupon.entity';
+import { CouponArray } from 'src/interfaces/coupon.interface';
 
 @Injectable()
 export class AdminService {
@@ -38,7 +41,11 @@ export class AdminService {
         protected subCategoryRepository: Repository<E_ProductSubCategory>,
         @InjectRepository(E_NewsLetter)
         protected newsRepository: Repository<E_NewsLetter>,
-        private readonly mailService: MailService
+        private readonly mailService: MailService,
+        @InjectRepository(E_Product)
+        protected productRepository: Repository<E_Product>,
+        @InjectRepository(E_UserCoupon)
+        protected userCouponRepository: Repository<E_UserCoupon>,
     ) { }
 
     async signIn(loginUserDto: LoginUserDto) {
@@ -302,14 +309,20 @@ export class AdminService {
             if (search && search != undefined) {
                 searchVariable = ` where (t."name" ilike '%${search}%' or t."code" ilike '%${search}%' or tc."name" ilike '%${search}%' or ts."name" ilike '%${search}%' )`
             }
-            const count = await this.dataSource.query(`select t.*,tc.name as categoryname,ts.name as subcategoryname 
+            const count = await this.dataSource.query(`select t.*,tc.name as categoryname,ts.name as subcategoryname ,
+            coalesce(sum(ti.quantity),0) as order_quantity 
             from tblproduct t 
             join tblproduct_category tc on tc.id = t.category_id 
-            join tblproduct_subcategory ts on ts.id = t.subcategory_id ${searchVariable} `)
-          const products = await this.dataSource.query(`select t.*,tc.name as categoryname,ts.name as subcategoryname 
+            join tblproduct_subcategory ts on ts.id = t.subcategory_id
+            left join tblorder_item ti on ti.product_id = t.id
+            ${searchVariable} group by t.id,tc.id,ts.id,t.code `)
+            const products = await this.dataSource.query(`select t.*,tc.name as categoryname,ts.name as subcategoryname ,
+          coalesce(sum(ti.quantity),0) as order_quantity 
           from tblproduct t 
           join tblproduct_category tc on tc.id = t.category_id 
-          join tblproduct_subcategory ts on ts.id = t.subcategory_id ${searchVariable} offset ${offset ? offset :0} limit 15`)
+          join tblproduct_subcategory ts on ts.id = t.subcategory_id
+          left join tblorder_item ti on ti.product_id = t.id
+          ${searchVariable} group by t.id,tc.id,ts.id,t.code  offset ${offset ? offset : 0} limit 15`)
           if (!products.length) {
             console.log('no products for now, please add some.');
             return {
@@ -573,6 +586,19 @@ export class AdminService {
         try {
             let checkAdmin = await this.orderRepository.findOne({ where: { id: orderStatus.order_id } })
             if (checkAdmin) {
+
+                if (orderStatus.status === "CANCELLED" || orderStatus.status === "REFUNDED") {
+                    const orderItems = await this.dataSource.query(`select * from tblorder_item ti where ti.order_id='${orderStatus.order_id}'`)
+                    if (orderItems.length) {
+                        for (let i = 0; i < orderItems.length; i++) {
+                            const product = await this.productRepository.findOne({ where: { id: orderItems[i].product_id } })
+                            const quantity = product.quantity + orderItems[i].quantity
+                            const id = orderItems[i].product_id
+                            const check = await this.productRepository.update({ id: id }, { quantity: quantity })
+                        }
+                    }
+                }
+
                 const user = await this.userRepository.findOne({ where: { id: checkAdmin.user_id } })
                 if (checkAdmin.status == "DELIVERED") {
                     await this.userRepository.update({ id: checkAdmin.user_id }, { bonus_points: user.bonus_points - Math.floor(checkAdmin.total / 20) })
@@ -679,6 +705,83 @@ export class AdminService {
             return CommonService.error(error)
         }
     }
+
+
+    async assignCoupon(userCouponDto: UserCouponDto) {
+        try {
+
+            const newCoupon = new E_UserCoupon()
+            newCoupon.coupon_id = userCouponDto.coupon_id
+            newCoupon.user_id = userCouponDto.user_id
+
+            await this.userCouponRepository.save(newCoupon);
+
+        } catch (error) {
+            console.log(error)
+            return CommonService.error(error)
+        }
+    }
+
+    async getAssignedCoupons(userCouponDto: Pick<UserCouponDto, 'user_id'>): Promise<Object> {
+
+        try {
+            const userCoupons: CouponArray | [] = await this.dataSource.query(`select tc.coupon_name,tc.discount_percent,tuc.user_id 
+            from tblcoupon tc join tblusercoupon tuc on tuc.coupon_id = tc.id 
+            where tuc.user_id ='${userCouponDto.user_id}' and tuc.status='active' `);
+
+            return {
+                statusCode: 400,
+                data: userCoupons.length ? userCoupons : []
+            }
+        } catch (error) {
+            console.log("ERROR", error.message)
+            return {
+                statusCode: 400,
+                message: error.message
+            }
+        }
+    }
+
+    async deleteAssignedCoupon(userCouponDto: UserCouponDto): Promise<any> {
+        const deleteCoupon = await this.userCouponRepository.delete({ id: userCouponDto.user_id, coupon_id: userCouponDto.coupon_id })
+        return {
+            statusCode: 200,
+            message: "coupon deleted."
+        }
+    }
+
+    async getWholeAssignedCoupons(offset: string) {
+        const count = await this.dataSource.query(`select  tu.id, tu.firstname ,tu.lastname ,sum(td.total) as total
+        from tbluser tu
+        join tblusercoupon tuc on tu.id = tuc.user_id      
+        left join tblorder_details td on td.user_id = tu.id
+        left join tblpayment tp on tp.order_id = td.id
+   where  (td.status ='DELIVERED' and td.mode_of_payment = 'CASHONDELIVERY') or
+          (td.mode_of_payment = 'E_PAY' and tp.status='PAID')
+        group by tu.id`)
+        const wholeAssignedCoupons = await this.dataSource.query(`select  tu.id, tu.firstname ,tu.lastname ,sum(td.total) as total
+        from tbluser tu
+        join tblusercoupon tuc on tu.id = tuc.user_id      
+        left join tblorder_details td on td.user_id = tu.id
+        left join tblpayment tp on tp.order_id = td.id
+   where  (td.status ='DELIVERED' and td.mode_of_payment = 'CASHONDELIVERY') or
+          (td.mode_of_payment = 'E_PAY' and tp.status='PAID')
+        group by tu.id offset ${offset} limit 15`)
+
+        if (!wholeAssignedCoupons.length) {
+            return {
+                statusCode: 400,
+                data: [],
+                count: count.length ?? 0
+            }
+        }
+        return {
+            statusCode: 200,
+            data: wholeAssignedCoupons,
+            count: count.length ?? 0
+        }
+    }
+
 }
 
 

@@ -1,6 +1,6 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { AddWhyUsDto, ChangeCouponStatus, ChangeOrderStatus, ChangePasswordDto, CheckCouponDto, CouponDto, ForgotPasswordDto, LoginUserDto, NewsLetterDto, ResetPasswordDto } from 'src/dto/common.dto';
+import { AddWhyUsDto, ChangeCouponStatus, ChangeOrderStatus, ChangePasswordDto, CheckCouponDto, CouponDto, ForgotPasswordDto, LoginUserDto, NewsLetterDto, ResetPasswordDto, UserCouponDto } from 'src/dto/common.dto';
 import { AdminService } from './admin.service';
 
 @Controller('admin')
@@ -260,6 +260,37 @@ export class AdminController {
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
     async newsLetterEmail(@Body() newsLetterDto: NewsLetterDto) {
         return this.adminService.newsLetterDto(newsLetterDto);
+    }
+
+    @Post('get-user-coupons')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'To add the dynamic content' })
+    @ApiResponse({ status: 200, description: 'Dynamic Content Successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    async getAllUserCoupons(@Query("offset") offset: string) {
+        return this.adminService.getWholeAssignedCoupons(offset);
+    }
+
+
+    @Post('assigned-coupon')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'To add the dynamic content' })
+    @ApiResponse({ status: 200, description: 'Dynamic Content Successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    async getAssignedCoupon(@Body() userCouponDto: Pick<UserCouponDto, 'user_id'>) {
+        return this.adminService.getAssignedCoupons(userCouponDto);
+    }
+
+    @Post('delete-assigned-coupon')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'To add the dynamic content' })
+    @ApiResponse({ status: 200, description: 'Dynamic Content Successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    async deleteAssignedCoupon(@Body() userCouponDto: UserCouponDto) {
+        return this.adminService.deleteAssignedCoupon(userCouponDto);
     }
     
 }

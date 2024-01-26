@@ -316,3 +316,18 @@ export class NewsLetterDto {
     })
     content: string;
 }
+
+export class UserCouponDto {
+    @IsNotEmpty()
+    @IsString()
+    @IsUUID()
+    coupon_id: UUID;
+
+    @IsNotEmpty()
+    @IsString()
+    @IsUUID()
+    user_id: UUID;
+
+}
+
+

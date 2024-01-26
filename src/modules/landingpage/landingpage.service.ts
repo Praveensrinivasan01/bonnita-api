@@ -69,7 +69,8 @@ export class LandingpageService {
         try {
             const newArrivals = await this.dataSource.query(`select distinct on (t.name) t.id,t."name",'new' as new,ti.id as product_image_id,ti."front_side",coalesce (cast(round(avg(tr.rating)) as int),5)  as rating, 
             t.mrp ,t.selling_price,t.description  ,
-            jsonb_build_object('OuterShell',t.code,'SKU',t.code,'color',t.color,'Lining',t.color) as Information
+            jsonb_build_object('OuterShell',t.code,'SKU',t.code,'color',t.color,'Lining',t.color) as Information,
+            t.quantity 
      from tblproduct t  
                  join tblproduct_image ti on ti.id = t.image_id 
                  left join tblproduct_review tr on tr.product_id = t.id
@@ -92,7 +93,8 @@ export class LandingpageService {
             ti."front_side",
             coalesce (cast(round(avg(tr.rating)) as int),5)  as rating, 
                         t.mrp ,t.selling_price,t.description ,
-                        jsonb_build_object('OuterShell',t.code,'SKU',t.code,'color',t.color,'Lining',t.color) as Information
+                        jsonb_build_object('OuterShell',t.code,'SKU',t.code,'color',t.color,'Lining',t.color) as Information,
+                        t.quantity 
                  from tblproduct t  
                              join tblproduct_image ti on ti.id = t.image_id 
                              left join tblproduct_review tr on tr.product_id = t.id

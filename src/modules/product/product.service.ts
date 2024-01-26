@@ -695,19 +695,34 @@ export class ProductService {
 
   async addToCart(cartDto: AddtoCartDto) {
     try {
+      const product = await this.productRepository.findOne({ where: { id: cartDto.product_id } })
+
       const cart = await this.cartRepository.findOne({
         where: { user_id: cartDto.user_id, product_id: cartDto.product_id },
       });
+      if (cartDto.quantity > product.quantity) {
+        return {
+          statusCode: 400,
+          message: "quantity exceeded the limit",
+          data: cart,
+          product
+        }
+      }
       if (cart) {
         await this.cartRepository.update(
           { id: cart.id },
           { quantity: cartDto.quantity },
         );
 
+        const cartBalance = await this.cartRepository.findOne({
+          where: { user_id: cartDto.user_id, product_id: cartDto.product_id },
+        });
+
         return {
           statusCode: 200,
           message: 'updated to cart',
-          data: cart,
+          data: cartBalance,
+          product
         };
       } else {
         const newCart = new E_ProductCartItem();
