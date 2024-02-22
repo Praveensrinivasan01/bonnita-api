@@ -20,7 +20,7 @@ export const databaseConfig: Omit<DBConfig, 'expiresIn' | 'secret'> = {
     database: process.env.DATABASE,
     host: process.env.HOST,
     port: Number(process.env.DBPORT),
-    username: process.env.USER,
+    username: 'bonnita',
     password: process.env.PASSWORD,
     synchronize: Boolean(process.env.SYNCHRONIZE),
 };
