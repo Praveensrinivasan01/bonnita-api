@@ -725,7 +725,7 @@ export class AdminService {
     async getAssignedCoupons(userCouponDto: Pick<UserCouponDto, 'user_id'>): Promise<Object> {
 
         try {
-            const userCoupons: CouponArray | [] = await this.dataSource.query(`select tc.coupon_name,tc.discount_percent,tuc.user_id 
+            const userCoupons: CouponArray | [] = await this.dataSource.query(`select tc.coupon_name,tc.discount_percent,tuc.user_id, tc.id as coupon_id
             from tblcoupon tc join tblusercoupon tuc on tuc.coupon_id = tc.id 
             where tuc.user_id ='${userCouponDto.user_id}' and tuc.status='active' `);
 
