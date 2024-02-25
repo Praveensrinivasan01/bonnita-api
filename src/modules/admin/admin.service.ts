@@ -262,7 +262,7 @@ export class AdminService {
            ${searchVariable} order by t2.createdat desc`)
             const customers = await this.dataSource.query(`select t2.id as "order_id" ,concat(t.firstname,' ', t.lastname) as username,
             t.email,TO_CHAR(t2.createdat ::timestamp, 'mm-dd-yyyy') as created_date,
-           t2.total,t2.quantity,t2.status 
+           t2.total,t2.quantity,t2.status ,(t2.createdat::time) AS order_time
            from tbluser t left join tblorder_details t2 on t2.user_id = t.id
            where  case when 'all' = '${status}' then t2.status in ('PENDING','PACKED','READYTOSHIP','ONTHEWAY','DELIVERED','RETURN','REFUNDED','CANCELLED','RAISEDAREQUEST')  
            else t2.status ='${status == 'all' ? 'PENDING' : status}' end 
@@ -709,12 +709,27 @@ export class AdminService {
 
     async assignCoupon(userCouponDto: UserCouponDto) {
         try {
+            await this.userCouponRepository.delete({ user_id: userCouponDto.user_id });
+            if (userCouponDto.coupons.length) {
+                for (let i = 0; i < userCouponDto.coupons.length; i++) {
+                    const newCoupon = new E_UserCoupon()
+                    newCoupon.coupon_id = userCouponDto.coupons[i]
+                    newCoupon.user_id = userCouponDto.user_id
+                    await this.userCouponRepository.save(newCoupon);
+                }
+                return {
+                    statusCode: 200,
+                    message: "Coupons assigned successfully"
+                }
+            }
 
-            const newCoupon = new E_UserCoupon()
-            newCoupon.coupon_id = userCouponDto.coupon_id
-            newCoupon.user_id = userCouponDto.user_id
+            if (!userCouponDto.coupons.length) {
+                return {
+                    statusCode: 200,
+                    message: "Coupons unassigned sucessfully"
+                }
+            }
 
-            await this.userCouponRepository.save(newCoupon);
 
         } catch (error) {
             console.log(error)
@@ -722,12 +737,12 @@ export class AdminService {
         }
     }
 
-    async getAssignedCoupons(userCouponDto: Pick<UserCouponDto, 'user_id'>): Promise<Object> {
+    async getAssignedCoupons(userCouponDto: Pick<UserCouponDto, 'user_id'>) {
 
         try {
-            const userCoupons: CouponArray | [] = await this.dataSource.query(`select tc.coupon_name,tc.discount_percent,tuc.user_id, tc.id as coupon_id
+            const userCoupons: CouponArray | [] = await this.dataSource.query(`select tc.id,tc.coupon_name,tc.discount_percent,tuc.user_id 
             from tblcoupon tc join tblusercoupon tuc on tuc.coupon_id = tc.id 
-            where tuc.user_id ='${userCouponDto.user_id}' and tuc.status='active' `);
+            where tuc.user_id ='${userCouponDto.user_id}' and tc.status='active' `);
 
             return {
                 statusCode: 400,

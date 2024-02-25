@@ -272,6 +272,15 @@ export class AdminController {
         return this.adminService.getWholeAssignedCoupons(offset);
     }
 
+    @Post('add-usercoupon')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'To add the dynamic content' })
+    @ApiResponse({ status: 200, description: 'Dynamic Content Successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    async assignCoupon(@Body() userCouponDto: UserCouponDto) {
+        return this.adminService.assignCoupon(userCouponDto);
+    }
 
     @Post('assigned-coupon')
     @HttpCode(HttpStatus.OK)

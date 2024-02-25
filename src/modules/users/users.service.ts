@@ -218,4 +218,8 @@ export class UsersService {
         }
 
     }
+
+    async sendLoginOtp(userDetailsDto: UserDetailsDto){
+
+    }
 }
