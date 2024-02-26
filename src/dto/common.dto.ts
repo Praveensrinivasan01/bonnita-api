@@ -324,6 +324,9 @@ export class UserCouponDto {
     coupon_id: UUID;
 
     @IsNotEmpty()
+    coupons: [];
+
+    @IsNotEmpty()
     @IsString()
     @IsUUID()
     user_id: UUID;
