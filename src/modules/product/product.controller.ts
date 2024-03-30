@@ -5,22 +5,27 @@ import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import * as fs from 'fs';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AddorUpdateProductDto, AddorUpdateCategoryDto, AddorUpdateSubCategoryDto, AddtoCartDto, AddReviewDto } from 'src/dto/product.dto';
+import { CheckProduct } from 'src/dto/common.dto';
 
 @Controller('product')
 @ApiTags('PRODUCT')
 export class ProductController {
 
+    AWS_S3_BUCKET: string = process.env.AWS_S3_BUCKET_NAME
     constructor(protected productService: ProductService) { }
-
 
     @Post('upload-image')
     @UseInterceptors(FileInterceptor('image'))
     async uploadFile(@UploadedFile() file) {
-        console.log(file)
-        const imageData = fs.readFileSync(file.path);
-        const imageDataBase64 = "data:image/jpeg;base64," + imageData.toString('base64');
-        return await this.productService.uploadImage(imageDataBase64, file)
-        return
+        const imageData = await fs.readFileSync(file.path);
+        const s3Response = await this.productService.s3_upload(imageData, this.AWS_S3_BUCKET, file['originalname'], file.mimetype)
+        if (!s3Response) {
+            return {
+                statusCode: 400,
+                message: "Image does not uploaded",
+            }
+        }
+        return await this.productService.uploadImage(s3Response["Location"], file)
     }
 
 
@@ -363,6 +368,17 @@ export class ProductController {
         @Query('type') type: string,
     ) {
         return this.productService.shopMapping(category, subcategory, search, price, offset, type);
+    }
+
+
+    @Post('check-products')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'To get all the category' })
+    @ApiResponse({ status: 200, description: 'fetched all category Successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    async checkProduct(@Body() checkproduct: CheckProduct) {
+        return this.productService.checkProduct(checkproduct.product_ids);
     }
 
 }

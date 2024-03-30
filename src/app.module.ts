@@ -12,6 +12,7 @@ import { OrderModule } from './modules/order/order.module';
 import { PaymentController } from './modules/payment/payment.controller';
 import { PaymentModule } from './modules/payment/payment.module';
 import { TwilioModule, TwilioService } from 'nestjs-twilio';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [ConfigModule.forRoot({ isGlobal: true }),
@@ -19,7 +20,8 @@ import { TwilioModule, TwilioService } from 'nestjs-twilio';
     TwilioModule.forRoot({
       accountSid: process.env.TWILIO_ACCOUNT_SID,
       authToken: process.env.TWILIO_AUTH_TOKEN,
-    }),],
+    }),
+    AuthModule,],
   controllers: [AppController],
   providers: [AppService],
 })

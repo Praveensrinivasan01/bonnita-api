@@ -1,6 +1,6 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { AddWhyUsDto, ChangeCouponStatus, ChangeOrderStatus, ChangePasswordDto, CheckCouponDto, CouponDto, ForgotPasswordDto, LoginUserDto, NewsLetterDto, ResetPasswordDto, UserCouponDto } from 'src/dto/common.dto';
+import { AddWhyUsDto, ChangeCouponStatus, ChangeOrderStatus, ChangePasswordDto, CheckCouponDto, CouponDto, DeliverDto, ForgotPasswordDto, LoginUserDto, NewsLetterDto, ResetPasswordDto, UserCouponDto } from 'src/dto/common.dto';
 import { AdminService } from './admin.service';
 
 @Controller('admin')
@@ -300,6 +300,46 @@ export class AdminController {
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
     async deleteAssignedCoupon(@Body() userCouponDto: UserCouponDto) {
         return this.adminService.deleteAssignedCoupon(userCouponDto);
+    }
+
+    @Post('add-delivery-charge')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'To add the dynamic content' })
+    @ApiResponse({ status: 200, description: 'Dynamic Content Successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    async addDeliveryCharge(@Body() deliverDto: Omit<DeliverDto, 'id'>) {
+        return this.adminService.addDeliver(deliverDto);
+    }
+
+    @Post('update-delivery-charge')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'To add the dynamic content' })
+    @ApiResponse({ status: 200, description: 'Dynamic Content Successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    async updateDeliveryCharge(@Body() deliverDto: DeliverDto) {
+        return this.adminService.updateDeliver(deliverDto);
+    }
+
+    @Get('get-delivery-charges')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'To add the dynamic content' })
+    @ApiResponse({ status: 200, description: 'Dynamic Content Successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    async() {
+        return this.adminService.getDeliverCharges();
+    }
+
+    @Post('delete-delivery-charge')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'To add the dynamic content' })
+    @ApiResponse({ status: 200, description: 'Dynamic Content Successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    async deleteDeliveryCharge(@Body() id: string) {
+        return this.adminService.deleteDeliveryCharge(id);
     }
     
 }

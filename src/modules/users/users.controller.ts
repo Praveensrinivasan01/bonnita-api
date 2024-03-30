@@ -1,6 +1,6 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { ChangePasswordDto, ForgotPasswordDto, LoginUserDto, ResetPasswordDto, SignupUserDto, UserDetailsDto } from 'src/dto/common.dto';
+import { ChangePasswordDto, ForgotPasswordDto, USERLoginUserDto, ResetPasswordDto, SignupUserDto, UserDetailsDto } from 'src/dto/common.dto';
 import { UsersService } from './users.service';
 
 @Controller('users')
@@ -23,15 +23,27 @@ export class UsersController {
         return await this.userService.signUp(signupUserDto);
     }
 
+
+    // @Post('/send-otp')
+    // @HttpCode(HttpStatus.OK)
+    // @ApiOperation({ summary: 'Register User' })
+    // // @ApiBody({ type: SignupUserDto })
+    // @ApiResponse({ status: 200, description: 'User created successfully' })
+    // @ApiResponse({ status: 400, description: 'User already exists' })
+    // @ApiResponse({ status: 500, description: 'Internal server error' })
+    // async sendOTP() {
+    //     return await this.userService.sendOtp();
+    // }
+
     //SignIn 
     @Post('/signin')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'User Login' })
-    @ApiBody({ type: LoginUserDto })
+    @ApiBody({ type: USERLoginUserDto })
     async signIn(
-        @Body() loginUserDto: LoginUserDto
+        @Body() loginUserDto: USERLoginUserDto
     ) {
-        return await this.userService.signIn(loginUserDto);
+        return await this.userService.signInWithOtp(loginUserDto);
     }
 
     @Post('forgot-password')

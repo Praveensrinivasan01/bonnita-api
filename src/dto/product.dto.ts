@@ -110,6 +110,9 @@ export class AddorUpdateProductDto {
     @IsString()
     name: string;
 
+    @IsNotEmpty()
+    tax: number;
+
     @ApiProperty({
         description: ' category_id',
         example: 'uhfd-88fhu-hd77',

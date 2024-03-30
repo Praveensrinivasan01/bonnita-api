@@ -44,6 +44,9 @@ export class E_Product extends BaseEntity {
     size: string;
 
     @Column({ default: 0 })
+    tax: number;
+
+    @Column({ default: 0 })
     mrp: number;
 
     @Column({ default: 0 })

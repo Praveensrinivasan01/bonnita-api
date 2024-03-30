@@ -10,9 +10,10 @@ import { E_UserPayment } from 'src/entities/users-management/user_payment.entity
 import { PassportModule } from '@nestjs/passport';
 import { MailService } from 'src/mail/mail.service';
 import { TwilioModule } from 'nestjs-twilio';
+import { E_Otp } from 'src/entities/users-management/otp.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([E_User, E_Token, E_UserAddress, E_UserPayment]),
+  imports: [TypeOrmModule.forFeature([E_User, E_Token, E_UserAddress, E_UserPayment, E_Otp]),
   JwtModule.register({
     secret: 'SecretKey',
     signOptions: {

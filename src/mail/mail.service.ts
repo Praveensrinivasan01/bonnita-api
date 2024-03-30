@@ -17,6 +17,7 @@ export class MailService {
             {}
         );
         // this.addCallerId()
+        // this.sendSms("")
     }
 
     async sendWelcomeEmail(campaignId: number, data) {
@@ -615,7 +616,7 @@ export class MailService {
 
     }
 
-    async sendLoginOtp(userDetailsDto: UserDetailsDto) {
+    async sendLoginOtp() {
         try {
             
             const apiKey = 'API_KEY';
@@ -644,6 +645,21 @@ export class MailService {
             console.error(error.statusCode);
             throw error;
         }
+    }
+
+
+    async sendSms(num, otp) {
+        let content = `${otp} is your BONNITA verification OTP. The code will be valid for 10 min. Do not share this OTP with anyone.`
+        axios.post(`http://instantalerts.in/api/smsapi?key=27a6181501fa04152b7082b49348a023&route=2&sender=COBCFT&number=${num}&templateid=1007242669501937271&sms=${content}`)
+            .then(response => {
+                console.log(response.data);
+                return response.data
+            })
+            .catch(error => {
+                console.error(error);
+                return undefined
+            });
+
     }
 }
 
@@ -685,3 +701,5 @@ export class MailService {
 //     // })
 //     return
 // }
+
+

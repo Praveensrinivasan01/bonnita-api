@@ -21,9 +21,18 @@ import { E_ProductFavourites } from 'src/entities/product-management/favourites.
 import { E_ProductCartItem } from 'src/entities/order-management/cart-item.entity';
 import { E_ProductReview } from 'src/entities/product-management/review.entity';
 import { E_ProductImage } from 'src/entities/product-management/product-image.entity';
+import * as AWS from "aws-sdk";
+
 
 @Injectable()
 export class ProductService {
+
+  AWS_S3_BUCKET: string = process.env.AWS_S3_BUCKET_NAME
+  S3 = new AWS.S3({
+    accessKeyId: process.env.AWS_S3_ACCESS_KEY,
+    secretAccessKey: process.env.AWS_S3_SECRET
+  })
+
   constructor(
     @InjectRepository(E_Product)
     protected productRepository: Repository<E_Product>,
@@ -45,7 +54,9 @@ export class ProductService {
     private cartRepository: Repository<E_ProductCartItem>,
     @InjectRepository(E_ProductReview)
     private reviewRepository: Repository<E_ProductReview>,
-  ) {}
+  ) {
+    // this.checkProduct([])
+  }
 
   async uploadImage(imageData, file) {
     try {
@@ -63,7 +74,7 @@ export class ProductService {
           imageData: imageData,
         };
 
-        console.log('objImage', objImage);
+        // console.log('objImage', objImage);
 
         await this.imageRepository.update({ id: image.id }, objImage);
         return {
@@ -92,6 +103,42 @@ export class ProductService {
     }
   }
 
+  async uploadFileToS3(file) {
+    console.log(file);
+    const { originalname } = file;
+
+    return await this.s3_upload(
+      file.buffer,
+      this.AWS_S3_BUCKET,
+      originalname,
+      file.mimetype,
+    );
+  }
+
+  async s3_upload(file, bucket, name, mimetype) {
+    const params = {
+      Bucket: bucket,
+      Key: String(name),
+      Body: file,
+      ACL: 'public-read',
+      ContentType: mimetype,
+      ContentDisposition: 'inline',
+      CreateBucketConfiguration: {
+        LocationConstraint: 'ap-south-1',
+      },
+    };
+    // console.log(params)
+
+    try {
+      let s3Response = await this.S3.upload(params).promise();
+      // console.log("S3", s3Response)
+      return s3Response;
+    } catch (e) {
+      console.log(e);
+      return undefined
+    }
+  }
+
   async uploadProductImage(imageData: any[], image_id) {
     try {
       const imageArray = ['front_side', 'back_side', 'left_side', 'right_side'];
@@ -110,9 +157,14 @@ export class ProductService {
           const saveImage = {};
           for (let i = 0; i < imageData.length; i++) {
             const baseImage = fs.readFileSync(imageData[i].path);
-            const imageDataBase64 =
-              'data:image/jpeg;base64,' + baseImage.toString('base64');
-            saveImage[imageArray[i]] = imageDataBase64;
+            const s3Response = await this.s3_upload(baseImage, this.AWS_S3_BUCKET, imageData[i]['originalname'], imageData[i]['mimetype'])
+            if (!s3Response) {
+              return {
+                statusCode: 400,
+                message: "Image does not uploaded",
+              }
+            }
+            saveImage[imageArray[i]] = s3Response["Location"];
           }
           if (saveImage) {
             await this.productImageRepository.update(
@@ -132,9 +184,14 @@ export class ProductService {
           const saveImage = new E_ProductImage();
           for (let i = 0; i < imageData.length; i++) {
             const baseImage = fs.readFileSync(imageData[i].path);
-            const imageDataBase64 =
-              'data:image/jpeg;base64,' + baseImage.toString('base64');
-            saveImage[imageArray[i]] = imageDataBase64;
+            const s3Response = await this.s3_upload(baseImage, this.AWS_S3_BUCKET, imageData[i]['originalname'], imageData[i]['mimetype'])
+            if (!s3Response) {
+              return {
+                statusCode: 400,
+                message: "Image does not uploaded",
+              }
+            }
+            saveImage[imageArray[i]] = s3Response["Location"];
           }
           await this.productImageRepository.save(saveImage);
           return {
@@ -225,6 +282,7 @@ export class ProductService {
       newProduct.mrp = productDto.product_mrp;
       newProduct.selling_price = productDto.product_selling_price;
       newProduct.name = productDto.name;
+      newProduct.tax = productDto.tax;
 
       const saveProduct = await this.productRepository.save(newProduct);
 
@@ -266,11 +324,12 @@ export class ProductService {
         description: prodctDto.product_description,
         category_id: prodctDto.category_id,
         subcategory_id: prodctDto.subcategory_id,
-        image_id: prodctDto.product_image_id,
+        // image_id: prodctDto.product_image_id,
         color: prodctDto.product_color,
         size: prodctDto.product_size,
         mrp: prodctDto.product_mrp,
         selling_price: prodctDto.product_selling_price,
+        tax: prodctDto.tax
       };
 
       const updateProduct = await this.productRepository.update(
@@ -544,6 +603,7 @@ export class ProductService {
                               'subcategory_id',t.subcategory_id,
                               'color',t.color,
                               'size',t."size" ,
+                              'tax',t.tax,
                               'mrp',t.mrp ,
                               'about',t.about,
                               'selling_price',t.selling_price,
@@ -824,6 +884,14 @@ export class ProductService {
   }
   async addReview(reviewDto: AddReviewDto) {
     try {
+
+      if (!reviewDto["user_id"]) {
+        return {
+          statusCode: 400,
+          message: "Please login to add review"
+        }
+      }
+
       const review = await this.reviewRepository.findOne({
         where: { user_id: reviewDto.user_id, product_id: reviewDto.product_id },
       });
@@ -991,4 +1059,35 @@ export class ProductService {
       return CommonService.error(error);
     }
   }
+
+  async checkProduct(product_ids: string[]) {
+    try {
+      const sample_ids = product_ids.length && product_ids.join("','")
+      const data = await this.dataSource.query(`select * from tblproduct where id in ('${sample_ids}')`)
+      console.log("DATA", data)
+      if (data.length) {
+        return {
+          statusCode: 200,
+          message: 'product fetched successfully',
+          data
+        };
+      } else {
+        return {
+          statusCode: 400,
+          message: 'no products found',
+          data: []
+        };
+      }
+
+    } catch (error) {
+      console.log(error);
+      return {
+        statusCode: 400,
+        message: 'no products found',
+        data: [],
+        error: error.message
+      };
+    }
+  }
+
 }

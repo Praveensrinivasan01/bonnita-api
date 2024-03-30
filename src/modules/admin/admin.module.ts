@@ -17,9 +17,10 @@ import { E_NewsLetter } from 'src/entities/admin-management/newsletter.entity';
 import { TwilioModule } from 'nestjs-twilio';
 import { E_Product } from 'src/entities/product-management/product.entity';
 import { E_UserCoupon } from 'src/entities/users-management/usercoupon.entity';
+import { E_Deliver } from 'src/entities/delivery_charge.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([E_Admin, E_Token, E_ProductSubCategory, E_ProductCategory, E_Coupon, E_OrderDetails, E_WhyUs, E_User, E_NewsLetter, E_Product, E_UserCoupon]),
+  imports: [TypeOrmModule.forFeature([E_Admin, E_Token, E_ProductSubCategory, E_ProductCategory, E_Coupon, E_OrderDetails, E_WhyUs, E_User, E_NewsLetter, E_Product, E_UserCoupon, E_Deliver]),
   JwtModule.register({
     secret: 'SecretKey',
     signOptions: {

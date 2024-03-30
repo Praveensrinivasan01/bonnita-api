@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID } from "class-validator";
+import { IsArray, IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID } from "class-validator";
 import { UUID } from "crypto";
 import { ENUM_ORDER_STATUS, ENUM_UserStatus } from "src/enum/common.enum";
 
@@ -73,6 +73,24 @@ export class LoginUserDto {
     password: string;
 }
 
+export class USERLoginUserDto {
+
+    @IsNotEmpty()
+    @IsString()
+    @ApiProperty({
+        description: 'User Email',
+        example: 'johndoe@gmail.com',
+    })
+    mobile: string;
+    // @IsNotEmpty()
+    // @IsString()
+    // @ApiProperty({
+    //     description: 'User Password',
+    //     example: 'Admin@g123',
+    // })
+    // password: string;
+}
+
 export class ForgotPasswordDto {
 
     @IsNotEmpty()
@@ -82,6 +100,25 @@ export class ForgotPasswordDto {
         example: 'johndoe@gmail.com',
     })
     email: string;
+}
+
+export class OTP_VERIFICATION_DTO {
+
+    @IsNotEmpty()
+    @IsString()
+    @ApiProperty({
+        description: 'otp',
+        example: '8747',
+    })
+    otp: string;
+
+    @IsNotEmpty()
+    @IsString()
+    @ApiProperty({
+        description: 'User ID',
+        example: 'jedy7ye7dg7ey77',
+    })
+    user_id: string;
 }
 
 export class ResetPasswordDto {
@@ -334,4 +371,38 @@ export class UserCouponDto {
 
 }
 
+export class DeliverDto {
 
+    @IsNotEmpty()
+    @IsString()
+    @IsUUID()
+    id: UUID;
+
+    @IsNotEmpty()
+    @IsString()
+    @ApiProperty({
+        description: 'User Email',
+        example: 'johndoe@gmail.com',
+    })
+    state: string;
+
+    @IsNotEmpty()
+    @ApiProperty({
+        description: 'User Password',
+        example: 'Admin@g123',
+    })
+    amount: number;
+}
+
+
+export class CheckProduct {
+
+    @IsNotEmpty()
+    @IsArray()
+    @ApiProperty({
+        description: 'User Email',
+        example: 'johndoe@gmail.com',
+    })
+    product_ids: string[];
+
+}
