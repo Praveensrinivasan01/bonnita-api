@@ -1,6 +1,6 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { ChangePasswordDto, ForgotPasswordDto, USERLoginUserDto, ResetPasswordDto, SignupUserDto, UserDetailsDto } from 'src/dto/common.dto';
+import { ChangePasswordDto, ForgotPasswordDto, USERLoginUserDto, ResetPasswordDto, SignupUserDto, UserDetailsDto, OTP_VERIFICATION_DTO } from 'src/dto/common.dto';
 import { UsersService } from './users.service';
 
 @Controller('users')
@@ -44,6 +44,16 @@ export class UsersController {
         @Body() loginUserDto: USERLoginUserDto
     ) {
         return await this.userService.signInWithOtp(loginUserDto);
+    }
+
+    @Post('/verify-otp')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'User Login' })
+    @ApiBody({ type: USERLoginUserDto })
+    async verifyOtp(
+        @Body() loginUserDto: OTP_VERIFICATION_DTO
+    ) {
+        return await this.userService.verifyWithOtp(loginUserDto);
     }
 
     @Post('forgot-password')

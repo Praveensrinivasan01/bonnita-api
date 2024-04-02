@@ -36,7 +36,7 @@ export class UsersService {
     async signUp(signupUserDto: SignupUserDto) {
         try {
             let user = new E_User();
-            let Existuser = await this.dataSource.query(`select id,firstname,lastname,email,password from "tbluser" where email ='${signupUserDto.email}'`)
+            let Existuser = await this.dataSource.query(`select id,firstname,lastname,email,password from "tbluser" where mobile ='+91${signupUserDto.mobile}'`)
             //newuser signup
             if (Existuser.length == 0) {
                 user.firstname = signupUserDto.firstname;
@@ -62,7 +62,7 @@ export class UsersService {
             else {
                 return {
                     statusCode: 400,
-                    message: 'Email Already Exists'
+                    message: 'User Already Exists'
                 }
             }
         } catch (err) {
@@ -77,7 +77,7 @@ export class UsersService {
     // }
 
     async signInWithOtp(loginUserDto: USERLoginUserDto) {
-        // console.log(await this.dataSource.query(`select * from tbluser`))
+        console.log(await this.dataSource.query(`select * from tbluser`))
         let user = await this.dataSource.query(`select * from tbluser where mobile='+91${loginUserDto.mobile}'`);
         if (!user.length) {
             return {
@@ -91,14 +91,14 @@ export class UsersService {
             const token = Math.floor(1000 + randomNum).toString()
             const newOtp = new E_Otp()
             newOtp.otp = token;
-            newOtp.user_id = user['id'];
+            newOtp.user_id = user[0]['id'];
             await this.otpRepository.save(newOtp);
 
             await this.mailService.sendSms(loginUserDto.mobile, token)
             // const jwtPayLoad = { email: user[0].email };
             // const jwtToken = await this.jwtService.signAsync(jwtPayLoad, { expiresIn: '1d' });
             return {
-                statusCode: 200, message: 'Otp send successfull'
+                statusCode: 200, token, message: 'Otp send successfull', user
             }
         } else {
             return {
@@ -115,12 +115,13 @@ export class UsersService {
                 statusCode: 400, message: 'Invalid Otp'
             }
         }
+        let userDetails = await this.dataSource.query(`select * from tbluser where id='${loginUserDto.user_id}'`);
         if (user.length) {
             const jwtPayLoad = { email: user.email };
             const jwtToken = await this.jwtService.signAsync(jwtPayLoad, { expiresIn: '1d' });
-            await this.dataSource.query(`delete from tblotp where user_id='${user.id}'`);
+            await this.dataSource.query(`delete from tblotp where user_id='${user[0].id}'`);
             return {
-                statusCode: 200, token: jwtToken, user: user[0], message: 'Login Successfull'
+                statusCode: 200, token: jwtToken, user: userDetails.length ? userDetails[0] : [], message: 'Login Successfull'
             }
         } else {
             return {
