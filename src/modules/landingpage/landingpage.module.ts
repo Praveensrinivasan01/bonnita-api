@@ -25,7 +25,7 @@ const storage = diskStorage({
   },
 });
 @Module({
-  imports: [TypeOrmModule.forFeature([E_Product, E_ProductImage, E_Image, E_ProductFavourites, E_ProductCategory, E_ProductSubCategory, E_ProductCartItem, E_ProductReview, E_OrderDetails, E_Query, E_BannerImage, E_WhyUs]),
+  imports: [TypeOrmModule.forFeature([E_Product, E_ProductImage, E_Image, E_ProductFavourites, E_ProductCategory, E_ProductSubCategory, E_ProductCartItem, E_ProductReview, E_OrderDetails, E_Query, E_BannerImage, E_WhyUs,]),
   MulterModule.register({ storage })],
   controllers: [LandingpageController],
   providers: [LandingpageService]

@@ -9,7 +9,7 @@ import { ProductService } from '../product/product.service';
 @ApiTags("LANDING PAGE")
 export class LandingpageController {
 
-    constructor(protected readonly landingPageService: LandingpageService, private readonly productService: ProductService) { }
+    constructor(protected readonly landingPageService: LandingpageService) { }
 
     AWS_S3_BUCKET: string = process.env.AWS_S3_BUCKET_NAME
 
@@ -90,7 +90,14 @@ export class LandingpageController {
     @UseInterceptors(FileInterceptor('image'))
     async uploadFile(@UploadedFile() file) {
         const imageData = await fs.readFileSync(file.path);
-        const s3Response = await this.productService.s3_upload(imageData, this.AWS_S3_BUCKET, file['originalname'], file.mimetype)
+        const s3Response = await this.landingPageService.s3_upload(imageData, this.AWS_S3_BUCKET, file['originalname'], file.mimetype)
+        if (!s3Response) {
+            return {
+                statusCode: 400,
+                message: "Image does not uploaded",
+            }
+        }
+        return await this.landingPageService.uploadImage(s3Response["Location"], file)
     }
 
     @Post('get-banner-image')
