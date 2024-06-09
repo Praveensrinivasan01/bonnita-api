@@ -44,9 +44,9 @@ export class UsersService {
                 user.mobile = `+91${signupUserDto.mobile}`;
                 user.email = signupUserDto.email;
                 //password hash
-                const salt = await bcrypt.genSalt();
+                // const salt = await bcrypt.genSalt();
                 // const hasheshPassword = await bcrypt.hash(signupUserDto.password, salt);
-                user.salt = salt;
+                // user.salt = salt;
                 // user.password = hasheshPassword;
                 user.createdat = new Date().toISOString().split('T')[0]
                 await this.userRepository.save(user)

@@ -11,6 +11,7 @@ import { PassportModule } from '@nestjs/passport';
 import { MailService } from 'src/mail/mail.service';
 import { TwilioModule } from 'nestjs-twilio';
 import { E_Otp } from 'src/entities/users-management/otp.entity';
+import { ProductModule } from '../product/product.module';
 
 @Module({
   imports: [TypeOrmModule.forFeature([E_User, E_Token, E_UserAddress, E_UserPayment, E_Otp]),
@@ -20,6 +21,7 @@ import { E_Otp } from 'src/entities/users-management/otp.entity';
       expiresIn: '1d'
     },
   }),
+    ProductModule,
   PassportModule.register({
     defaultStrategy: 'jwt'
   }),

@@ -4,12 +4,14 @@ import { LandingpageService } from './landingpage.service';
 import { QueryDto, UpdateQueryDto } from 'src/dto/query.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as fs from 'fs';
+import { ProductService } from '../product/product.service';
 @Controller('landingpage')
 @ApiTags("LANDING PAGE")
 export class LandingpageController {
 
-    constructor(protected readonly landingPageService: LandingpageService) { }
+    constructor(protected readonly landingPageService: LandingpageService, private readonly productService: ProductService) { }
 
+    AWS_S3_BUCKET: string = process.env.AWS_S3_BUCKET_NAME
 
     @Post('get-all-category')
     @HttpCode(HttpStatus.OK)
@@ -87,11 +89,8 @@ export class LandingpageController {
     @Post('upload-image')
     @UseInterceptors(FileInterceptor('image'))
     async uploadFile(@UploadedFile() file) {
-        console.log(file)
-        const imageData = fs.readFileSync(file.path);
-        const imageDataBase64 = "data:image/jpeg;base64," + imageData.toString('base64');
-        return await this.landingPageService.uploadImage(imageDataBase64, file)
-        return
+        const imageData = await fs.readFileSync(file.path);
+        const s3Response = await this.productService.s3_upload(imageData, this.AWS_S3_BUCKET, file['originalname'], file.mimetype)
     }
 
     @Post('get-banner-image')
