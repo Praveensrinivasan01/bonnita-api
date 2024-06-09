@@ -51,7 +51,7 @@ export class UsersService {
                 user.createdat = new Date().toISOString().split('T')[0]
                 await this.userRepository.save(user)
 
-                console.log()
+                console.log(user)
                 await this.mailService.sendWelcomeEmail(5448139, user)
                 return {
                     statusCode: 200,
