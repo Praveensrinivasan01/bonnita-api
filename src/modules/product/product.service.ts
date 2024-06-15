@@ -169,7 +169,8 @@ export class ProductService {
   async makepayment(detai1ls) {
     // Construct the Cashfree request data
     try {
-      const url = 'https://sandbox.cashfree.com/pg/orders';
+      const url = `https://api.cashfree.com/pg/orders`;
+
       const headers = {
         'Content-Type': 'application/json',
         'x-api-version': '2022-09-01',

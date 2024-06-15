@@ -368,7 +368,7 @@ where td.createdat >= NOW() - INTERVAL '24 hours') as total_count
         try {
           const config = {
             method: 'GET',
-            url: `https://sandbox.cashfree.com/pg/orders/${orderid}`,
+              url: `https://api.cashfree.com/pg/orders/${orderid}`,
             headers: {
               'Content-Type': 'application/json',
               'x-api-version': '2022-09-01',
