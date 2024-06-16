@@ -5,6 +5,7 @@ import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import * as fs from 'fs';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AddorUpdateProductDto, AddorUpdateCategoryDto, AddorUpdateSubCategoryDto, AddtoCartDto, AddReviewDto } from 'src/dto/product.dto';
+import { CheckProduct } from 'src/dto/common.dto';
 
 @Controller('product')
 @ApiTags('PRODUCT')
@@ -363,6 +364,16 @@ export class ProductController {
         @Query('type') type: string,
     ) {
         return this.productService.shopMapping(category, subcategory, search, price, offset, type);
+    }
+
+    @Post('check-products')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'To get all the category' })
+    @ApiResponse({ status: 200, description: 'fetched all category Successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    async checkProduct(@Body() checkproduct: CheckProduct) {
+        return this.productService.checkProduct(checkproduct.product_ids);
     }
 
 }

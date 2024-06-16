@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsEnum, IsNotEmpty, IsString, IsUUID } from "class-validator";
+import { IsArray, IsEnum, IsNotEmpty, IsString, IsUUID } from "class-validator";
 import { UUID } from "crypto";
 import { ENUM_ORDER_STATUS, ENUM_UserStatus } from "src/enum/common.enum";
 
@@ -333,4 +333,17 @@ export class UserCouponDto {
 
 }
 
+
+
+export class CheckProduct {
+
+    @IsNotEmpty()
+    @IsArray()
+    @ApiProperty({
+        description: 'User Email',
+        example: 'johndoe@gmail.com',
+    })
+    product_ids: string[];
+
+}
 

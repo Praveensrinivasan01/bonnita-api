@@ -797,6 +797,21 @@ export class AdminService {
         }
     }
 
+    async getDeliverCharges() {
+        const data = await this.dataSource.query(`select * from tbldeliver`)
+        if (!data.length) {
+            return {
+                statusCode: 400,
+                data: [],
+                messages: "No delivery states"
+
+            }
+        }
+        return {
+            statusCode: 200,
+            data: data,
+        }
+    }
 }
 
 

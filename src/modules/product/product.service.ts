@@ -992,4 +992,34 @@ export class ProductService {
       return CommonService.error(error);
     }
   }
+
+  async checkProduct(product_ids: string[]) {
+    try {
+      const sample_ids = product_ids.length && product_ids.join("','")
+      const data = await this.dataSource.query(`select * from tblproduct where id in ('${sample_ids}')`)
+      console.log("DATA", data)
+      if (data.length) {
+        return {
+          statusCode: 200,
+          message: 'product fetched successfully',
+          data
+        };
+      } else {
+        return {
+          statusCode: 400,
+          message: 'no products found',
+          data: []
+        };
+      }
+
+    } catch (error) {
+      console.log(error);
+      return {
+        statusCode: 400,
+        message: 'no products found',
+        data: [],
+        error: error.message
+      };
+    }
+  }
 }

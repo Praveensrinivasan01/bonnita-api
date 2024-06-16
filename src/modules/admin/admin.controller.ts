@@ -301,5 +301,15 @@ export class AdminController {
     async deleteAssignedCoupon(@Body() userCouponDto: UserCouponDto) {
         return this.adminService.deleteAssignedCoupon(userCouponDto);
     }
-    
+
+    @Get('get-delivery-charges')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'To add the dynamic content' })
+    @ApiResponse({ status: 200, description: 'Dynamic Content Successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    async() {
+        return this.adminService.getDeliverCharges();
+    }
+
 }
