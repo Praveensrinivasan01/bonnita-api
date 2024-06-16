@@ -7,10 +7,11 @@ import { DataSource, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { CommonService } from 'src/common/common.service';
-import { ChangePasswordDto, ForgotPasswordDto, LoginUserDto, ResetPasswordDto, SignupUserDto, UserDetailsDto } from 'src/dto/common.dto';
+import { ChangePasswordDto, ForgotPasswordDto, LoginUserDto, OTP_VERIFICATION_DTO, ResetPasswordDto, SignupUserDto, USERLoginUserDto, UserDetailsDto } from 'src/dto/common.dto';
 import { E_UserAddress } from 'src/entities/users-management/user_address.entity';
 import { ENUM_Flag } from 'src/enum/common.enum';
 import { MailService } from 'src/mail/mail.service';
+import { E_Otp } from 'src/entities/users-management/otp.entity';
 
 @Injectable()
 export class UsersService {
@@ -23,13 +24,19 @@ export class UsersService {
         private tokenRepository: Repository<E_Token>,
         @InjectRepository(E_UserAddress)
         private userAddressRepository: Repository<E_UserAddress>,
-        private readonly mailService: MailService
-    ) { }
+        private readonly mailService: MailService,
+        @InjectRepository(E_Otp)
+        private otpRepository: Repository<E_Otp>,
+    ) {
+
+        // this.sendOtp()
+
+    }
 
     async signUp(signupUserDto: SignupUserDto) {
         try {
             let user = new E_User();
-            let Existuser = await this.dataSource.query(`select id,firstname,lastname,email,password from "tbluser" where email ='${signupUserDto.email}'`)
+            let Existuser = await this.dataSource.query(`select id,firstname,lastname,email,password from "tbluser" where mobile ='+91${signupUserDto.mobile}'`)
             //newuser signup
             if (Existuser.length == 0) {
                 user.firstname = signupUserDto.firstname;
@@ -37,10 +44,10 @@ export class UsersService {
                 user.mobile = `+91${signupUserDto.mobile}`;
                 user.email = signupUserDto.email;
                 //password hash
-                const salt = await bcrypt.genSalt();
-                const hasheshPassword = await bcrypt.hash(signupUserDto.password, salt);
-                user.salt = salt;
-                user.password = hasheshPassword;
+                // const salt = await bcrypt.genSalt();
+                // const hasheshPassword = await bcrypt.hash(signupUserDto.password, salt);
+                // user.salt = salt;
+                // user.password = hasheshPassword;
                 user.createdat = new Date().toISOString().split('T')[0]
                 await this.userRepository.save(user)
 
@@ -55,7 +62,7 @@ export class UsersService {
             else {
                 return {
                     statusCode: 400,
-                    message: 'Email Already Exists'
+                    message: 'User Already Exists'
                 }
             }
         } catch (err) {
@@ -64,14 +71,34 @@ export class UsersService {
         }
     }
 
-    async signIn(loginUserDto: LoginUserDto) {
-        let user = await this.dataSource.query(`select * from tbluser where email='${loginUserDto.email}'`)
-        let pwdChk = user.length ? await bcrypt.compare(loginUserDto.password, user[0].password) : false;
-        if (user.length && pwdChk) {
-            const jwtPayLoad = { email: loginUserDto.email };
-            const jwtToken = await this.jwtService.signAsync(jwtPayLoad, { expiresIn: '1d' });
+    // async sendOtp() {
+    //     const data = await this.mailService.sendSms()
+    //     return data
+    // }
+
+    async signInWithOtp(loginUserDto: USERLoginUserDto) {
+        console.log(await this.dataSource.query(`select * from tbluser`))
+        let user = await this.dataSource.query(`select * from tbluser where mobile='+91${loginUserDto.mobile}'`);
+        if (!user.length) {
             return {
-                statusCode: 200, token: jwtToken, user: user[0], message: 'Login Successfull'
+                statusCode: 400, message: 'Invalid mobile number'
+            }
+        }
+        await this.dataSource.query(`delete from tblotp where user_id='${user.id}'`);
+        // let pwdChk = user.length ? await bcrypt.compare(loginUserDto.password, user[0].password) : false;
+        if (user.length) {
+            const randomNum = Math.random() * 9000
+            const token = Math.floor(1000 + randomNum).toString()
+            const newOtp = new E_Otp()
+            newOtp.otp = token;
+            newOtp.user_id = user[0]['id'];
+            await this.otpRepository.save(newOtp);
+
+            await this.mailService.sendSms(loginUserDto.mobile, token)
+            // const jwtPayLoad = { email: user[0].email };
+            // const jwtToken = await this.jwtService.signAsync(jwtPayLoad, { expiresIn: '1d' });
+            return {
+                statusCode: 200, token, message: 'Otp send successfull', user
             }
         } else {
             return {
@@ -79,6 +106,45 @@ export class UsersService {
             }
         }
     }
+
+
+    async verifyWithOtp(loginUserDto: OTP_VERIFICATION_DTO) {
+        let user = await this.dataSource.query(`select * from tblotp where user_id='${loginUserDto.user_id}' and otp = '${loginUserDto.otp}'`);
+        if (!user.length) {
+            return {
+                statusCode: 400, message: 'Invalid Otp'
+            }
+        }
+        let userDetails = await this.dataSource.query(`select * from tbluser where id='${loginUserDto.user_id}'`);
+        if (user.length) {
+            const jwtPayLoad = { email: user.email };
+            const jwtToken = await this.jwtService.signAsync(jwtPayLoad, { expiresIn: '1d' });
+            await this.dataSource.query(`delete from tblotp where user_id='${user[0].id}'`);
+            return {
+                statusCode: 200, token: jwtToken, user: userDetails.length ? userDetails[0] : [], message: 'Login Successfull'
+            }
+        } else {
+            return {
+                statusCode: 310, message: 'Invalid credentials'
+            }
+        }
+    }
+
+    // async signIn(loginUserDto: LoginUserDto) {
+    //     let user = await this.dataSource.query(`select * from tbluser where email='${loginUserDto.email}'`)
+    //     let pwdChk = user.length ? await bcrypt.compare(loginUserDto.password, user[0].password) : false;
+    //     if (user.length && pwdChk) {
+    //         const jwtPayLoad = { email: loginUserDto.email };
+    //         const jwtToken = await this.jwtService.signAsync(jwtPayLoad, { expiresIn: '1d' });
+    //         return {
+    //             statusCode: 200, token: jwtToken, user: user[0], message: 'Login Successfull'
+    //         }
+    //     } else {
+    //         return {
+    //             statusCode: 310, message: 'Invalid credentials'
+    //         }
+    //     }
+    // }
 
     async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
         try {

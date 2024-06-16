@@ -119,8 +119,8 @@ export class OrderService {
 
                 await this.dataSource.query(updateQuantityArray['query'])
             }
-            const total_amount = totalAmount - addOrUpdateOrder.discount + (addOrUpdateOrder.shipping_amount ?? 0) - (addOrUpdateOrder.bonus ?? 0)
-            await this.orderRepository.update({ id: saveOrder.id }, { total: total_amount });
+            // const total_amount = totalAmount - addOrUpdateOrder.discount + (addOrUpdateOrder.shipping_amount ?? 0) - (addOrUpdateOrder.bonus ?? 0)
+            // await this.orderRepository.update({ id: saveOrder.id }, { total: total_amount });
             await this.userRepository.update({ id: addOrUpdateOrder.user_id }, { bonus_points: existUser[0].bonus_points - addOrUpdateOrder.bonus })
 
             //Have to trigger a email
@@ -249,7 +249,7 @@ export class OrderService {
     async getuserOrdersItemsById(order_id, offset) {
         try {
 
-            const order = await this.dataSource.query(`select t.name,ti2.front_side ,ti.quantity ,ti.price ,ti.product_id ,ti.order_id ,tod.total,tod.quantity as total_quantity ,
+            const order = await this.dataSource.query(`select t.name,t.tax,ti2.front_side ,ti.quantity ,ti.price ,ti.product_id ,ti.order_id ,tod.total,tod.quantity as total_quantity ,
             tod.discount ,tod.shipping_amount,
            TO_CHAR(tod.createdat ::timestamp, 'mm-dd-yyyy') as created_date,tod.status,
            concat(t2.firstname,' ',t2.lastname) as username,ta.room_no ,ta.address_line1 ,ta.address_line2,

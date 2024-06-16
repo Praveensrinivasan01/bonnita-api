@@ -11,17 +11,21 @@ import { CheckProduct } from 'src/dto/common.dto';
 @ApiTags('PRODUCT')
 export class ProductController {
 
+    AWS_S3_BUCKET: string = process.env.AWS_S3_BUCKET_NAME
     constructor(protected productService: ProductService) { }
-
 
     @Post('upload-image')
     @UseInterceptors(FileInterceptor('image'))
     async uploadFile(@UploadedFile() file) {
-        console.log(file)
-        const imageData = fs.readFileSync(file.path);
-        const imageDataBase64 = "data:image/jpeg;base64," + imageData.toString('base64');
-        return await this.productService.uploadImage(imageDataBase64, file)
-        return
+        const imageData = await fs.readFileSync(file.path);
+        const s3Response = await this.productService.s3_upload(imageData, this.AWS_S3_BUCKET, file['originalname'], file.mimetype)
+        if (!s3Response) {
+            return {
+                statusCode: 400,
+                message: "Image does not uploaded",
+            }
+        }
+        return await this.productService.uploadImage(s3Response["Location"], file)
     }
 
 
@@ -365,6 +369,7 @@ export class ProductController {
     ) {
         return this.productService.shopMapping(category, subcategory, search, price, offset, type);
     }
+
 
     @Post('check-products')
     @HttpCode(HttpStatus.OK)

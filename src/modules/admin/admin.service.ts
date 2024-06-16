@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { AddWhyUsDto, ChangeCouponStatus, ChangeOrderStatus, ChangePasswordDto, CouponDto, ForgotPasswordDto, LoginUserDto, NewsLetterDto, ResetPasswordDto, UserCouponDto } from 'src/dto/common.dto';
+import { AddWhyUsDto, ChangeCouponStatus, ChangeOrderStatus, ChangePasswordDto, CouponDto, DeliverDto, ForgotPasswordDto, LoginUserDto, NewsLetterDto, ResetPasswordDto, UserCouponDto } from 'src/dto/common.dto';
 import { E_Admin } from 'src/entities/admin-management/admin.entity';
 import { E_Token } from 'src/entities/token.entity';
 import { DataSource, Repository } from 'typeorm';
@@ -18,6 +18,7 @@ import { E_NewsLetter } from 'src/entities/admin-management/newsletter.entity';
 import { E_Product } from 'src/entities/product-management/product.entity';
 import { E_UserCoupon } from 'src/entities/users-management/usercoupon.entity';
 import { CouponArray } from 'src/interfaces/coupon.interface';
+import { E_Deliver } from 'src/entities/delivery_charge.entity';
 
 @Injectable()
 export class AdminService {
@@ -46,6 +47,8 @@ export class AdminService {
         protected productRepository: Repository<E_Product>,
         @InjectRepository(E_UserCoupon)
         protected userCouponRepository: Repository<E_UserCoupon>,
+        @InjectRepository(E_Deliver)
+        protected deliverRepository: Repository<E_Deliver>,
     ) { }
 
     async signIn(loginUserDto: LoginUserDto) {
@@ -283,19 +286,21 @@ export class AdminService {
     async getOrderDetails(order_id) {
         try {
             const customers = await this.dataSource.query(`select ti.quantity,ti.price ,td.total ,td.quantity as total_quantity,td.mode_of_payment ,td.status ,
+            tmi.front_side,t.color,ti.order_id,t.size,TO_CHAR(td.createdat ::timestamp, 'mm-dd-yyyy') as createdat,
+            concat('INV-BON',substring(EXTRACT(EPOCH FROM td.createdat)::varchar,1,8)) as invoice_num,(t.tax * ti.quantity) as tax,
             tua.room_no ,tua.address_line1 ,tua.address_line2 ,tua.city ,tua.country ,tua.zip_code,tua.state,
             concat(tu.firstname,' ',tu.lastname) as username ,t."name"  from tblorder_details td 
                  join tblorder_item ti on ti.order_id = td.id 
                  join tbluser tu on tu.id = td.user_id
                  join tbluser_address tua on tua.user_id::uuid = tu.id
                  join tblproduct t on t.id = ti.product_id  
+                 join tblproduct_image tmi on tmi.id = t.image_id 
             where td.id = '${order_id}'`)
             return {
                 statusCode: 200,
                 message: "fetched order successfully",
                 customers
             }
-
         } catch (error) {
             console.log(error)
             return CommonService.error(error)
@@ -322,7 +327,7 @@ export class AdminService {
           join tblproduct_category tc on tc.id = t.category_id 
           join tblproduct_subcategory ts on ts.id = t.subcategory_id
           left join tblorder_item ti on ti.product_id = t.id
-          ${searchVariable} group by t.id,tc.id,ts.id,t.code  offset ${offset ? offset : 0} limit 15`)
+          ${searchVariable} group by t.id,tc.id,ts.id,t.code order by t.createdat desc offset ${offset ? offset : 0} limit 15`)
           if (!products.length) {
             console.log('no products for now, please add some.');
             return {
@@ -627,7 +632,6 @@ export class AdminService {
     async addWhyUs(addWhyUsDto: Omit<AddWhyUsDto, 'whyus_id'>) {
         try {
 
-            await this.dataSource.query(`delete from tblwhyus`)
 
             const newWhyUs = new E_WhyUs();
             newWhyUs.image_id = addWhyUsDto.image_id
@@ -705,7 +709,6 @@ export class AdminService {
             return CommonService.error(error)
         }
     }
-
 
     async assignCoupon(userCouponDto: UserCouponDto) {
         try {
@@ -797,6 +800,53 @@ export class AdminService {
         }
     }
 
+    async addDeliver(deliverDto: Omit<DeliverDto, 'id'>) {
+        try {
+
+
+            const deliver = new E_Deliver();
+            deliver.state = deliverDto.state
+            deliver.amount = deliverDto.amount
+
+            await this.deliverRepository.save(deliver)
+
+            return {
+                statusCode: 200,
+                message: "Delivery charge created successfully",
+                data: deliver
+            }
+
+        } catch (error) {
+            console.log(error)
+            return CommonService.error(error)
+        }
+    }
+
+    async updateDeliver(deliverDto: DeliverDto) {
+        try {
+
+            const check = await this.deliverRepository.findOne({ where: { id: deliverDto.id } })
+            if (!check) {
+                return {
+                    statusCode: 400,
+                    message: "State not found",
+                }
+            }
+
+            const deliver = await this.deliverRepository.update({ id: deliverDto.id }, { amount: deliverDto.amount, state: deliverDto.state })
+
+            return {
+                statusCode: 200,
+                message: "Deliver charge updated successfully",
+                data: deliver
+            }
+
+        } catch (error) {
+            console.log(error)
+            return CommonService.error(error)
+        }
+    }
+
     async getDeliverCharges() {
         const data = await this.dataSource.query(`select * from tbldeliver`)
         if (!data.length) {
@@ -810,6 +860,30 @@ export class AdminService {
         return {
             statusCode: 200,
             data: data,
+        }
+    }
+
+    async deleteDeliveryCharge(id: any) {
+        if (id["id"]) {
+            id = id["id"]
+        }
+        try {
+            let checkDeliveryRecord = await this.deliverRepository.findOne({ where: { id: id } })
+            if (checkDeliveryRecord) {
+                const deleteCoupon = await this.deliverRepository.delete({ id: checkDeliveryRecord.id })
+                return {
+                    statusCode: 200,
+                    message: "Coupon deleted successfully"
+                }
+            } else {
+                return {
+                    statusCode: 400,
+                    message: "Coupon does not exists"
+                }
+            }
+        } catch (error) {
+            console.log(error)
+            return CommonService.error(error)
         }
     }
 }

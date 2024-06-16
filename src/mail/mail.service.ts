@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import axios from 'axios';
 import { TwilioService } from 'nestjs-twilio';
 import Mailjet, * as mailjet from 'node-mailjet';
+import { UserDetailsDto } from 'src/dto/common.dto';
 
 
 @Injectable()
@@ -16,6 +17,7 @@ export class MailService {
             {}
         );
         // this.addCallerId()
+        // this.sendSms("")
     }
 
     async sendWelcomeEmail(campaignId: number, data) {
@@ -614,8 +616,53 @@ export class MailService {
 
     }
 
+    async sendLoginOtp() {
+        try {
+            
+            const apiKey = 'API_KEY';
+            const apiUrl = 'https://control.msg91.com/api/v5/flow/'; 
+             
+            const requestData = {
+                template_id: 'MSG91_TEMPLATE_ID', // Template Id
+                short_url: '0',
+                recipients: [{ mobiles: `91${"WILL TAKE PHONE NUMBER FROM DB"}`, var1: 'VARIABLE'}] // var1 Must Be OTP
+            };
+             
+            axios.post(apiUrl, requestData, {
+                headers: {
+                'Content-Type': 'application/json',
+                'authkey': apiKey
+                }
+            })
+            .then(response => {
+                console.log(response.data);
+            })
+            .catch(error => {
+                console.error(error);
+            });
 
+        } catch (error) {
+            console.error(error.statusCode);
+            throw error;
+        }
+    }
+
+
+    async sendSms(num, otp) {
+        let content = `${otp} is your BONNITA verification OTP. The code will be valid for 10 min. Do not share this OTP with anyone.`
+        axios.post(`http://instantalerts.in/api/smsapi?key=27a6181501fa04152b7082b49348a023&route=2&sender=COBCFT&number=${num}&templateid=1007242669501937271&sms=${content}`)
+            .then(response => {
+                console.log(response.data);
+                return response.data
+            })
+            .catch(error => {
+                console.error(error);
+                return undefined
+            });
+
+    }
 }
+
 // async sendSMS() {
 //     // const sendSms = await this.twilioService.client.messages.create({
 //     //     from: '+12059735299',
@@ -654,3 +701,5 @@ export class MailService {
 //     // })
 //     return
 // }
+
+
