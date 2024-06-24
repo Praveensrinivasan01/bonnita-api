@@ -15,6 +15,7 @@ import { E_Query } from 'src/entities/users-management/query.entity';
 import { E_WhyUs } from 'src/entities/why-us/why-us.entity';
 import { ENUM_Query } from 'src/enum/common.enum';
 import { DataSource, Repository } from 'typeorm';
+import * as AWS from "aws-sdk";
 
 @Injectable()
 export class LandingpageService {
@@ -45,6 +46,12 @@ export class LandingpageService {
         @InjectRepository(E_WhyUs)
         private whyUsRepository: Repository<E_WhyUs>,
     ) { }
+
+    AWS_S3_BUCKET: string = process.env.AWS_S3_BUCKET_NAME
+    S3 = new AWS.S3({
+        accessKeyId: process.env.AWS_S3_ACCESS_KEY,
+        secretAccessKey: process.env.AWS_S3_SECRET
+    })
 
 
     async getAllCategory() {
@@ -198,27 +205,6 @@ export class LandingpageService {
         }
     }
 
-    async uploadImage(imageData, file) {
-        try {
-            const newImage = new E_BannerImage();
-            newImage.mimetype = file.mimetype;
-            newImage.size = file.size;
-            newImage.path = file.path;
-            newImage.imageData = imageData;
-
-            const saveImage = await this.bannerImageRepository.save(newImage);
-
-            console.log('saveImage', saveImage);
-            return {
-                statusCode: 200,
-                message: 'image saved successfully',
-                image: saveImage,
-            };
-        } catch (error) {
-            console.log(error);
-            return CommonService.error(error);
-        }
-    }
 
     async getBannerImage(offset) {
         try {
@@ -290,6 +276,87 @@ export class LandingpageService {
         } catch (error) {
             console.log(error);
             return CommonService.error(error);
+        }
+    }
+
+    async uploadImage(imageData, file) {
+        try {
+            if (file.image_id) {
+                const image = await this.bannerImageRepository.findOne({
+                    where: { id: file.image_id },
+                });
+                if (!image)
+                    return { statusCode: 400, message: 'Image does not exists.' };
+
+                const objImage = {
+                    mimetype: file.mimetype,
+                    size: file.size,
+                    path: file.path,
+                    imageData: imageData,
+                };
+
+                // console.log('objImage', objImage);
+
+                await this.bannerImageRepository.update({ id: image.id }, objImage);
+                return {
+                    statusCode: 200,
+                    message: 'image updated successfully',
+                };
+            } else {
+                const newImage = new E_BannerImage();
+                newImage.mimetype = file.mimetype;
+                newImage.size = file.size;
+                newImage.path = file.path;
+                newImage.imageData = imageData;
+
+                const saveImage = await this.bannerImageRepository.save(newImage);
+
+                console.log('saveImage', saveImage);
+                return {
+                    statusCode: 200,
+                    message: 'image saved successfully',
+                    image: saveImage,
+                };
+            }
+        } catch (error) {
+            console.log(error);
+            return CommonService.error(error);
+        }
+    }
+
+    async uploadFileToS3(file) {
+        console.log(file);
+        const { originalname } = file;
+
+        return await this.s3_upload(
+            file.buffer,
+            this.AWS_S3_BUCKET,
+            originalname,
+            file.mimetype,
+        );
+    }
+
+    async s3_upload(file, bucket, name, mimetype) {
+        const params = {
+            Bucket: bucket,
+            Key: String(name),
+            Body: file,
+            ACL: 'public-read',
+            ContentType: mimetype,
+            ContentDisposition: 'inline',
+            CreateBucketConfiguration: {
+                LocationConstraint: 'ap-south-1',
+            },
+        };
+        // console.log(params)
+
+        try {
+            let s3Response = await this.S3.upload(params).promise();
+            // console.log("S3", s3Response)
+            return s3Response;
+        } catch (e) {
+            console.log(e);
+            return undefined
         }
     }
 

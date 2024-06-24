@@ -158,7 +158,6 @@ export class ProductService {
           for (let i = 0; i < imageData.length; i++) {
             const baseImage = fs.readFileSync(imageData[i].path);
             const s3Response = await this.s3_upload(baseImage, this.AWS_S3_BUCKET, imageData[i]['originalname'], imageData[i]['mimetype'])
-            console.log("s3Response:::", s3Response)
             if (!s3Response) {
               return {
                 statusCode: 400,

@@ -86,12 +86,19 @@ export class LandingpageController {
     }
 
 
-    // @Post('upload-image')
-    // @UseInterceptors(FileInterceptor('image'))
-    // async uploadFile(@UploadedFile() file) {
-    //     const imageData = await fs.readFileSync(file.path);
-    //     const s3Response = await this.productService.s3_upload(imageData, this.AWS_S3_BUCKET, file['originalname'], file.mimetype)
-    // }
+    @Post('upload-image')
+    @UseInterceptors(FileInterceptor('image'))
+    async uploadFile(@UploadedFile() file) {
+        const imageData = await fs.readFileSync(file.path);
+        const s3Response = await this.landingPageService.s3_upload(imageData, this.AWS_S3_BUCKET, file['originalname'], file.mimetype)
+        if (!s3Response) {
+            return {
+                statusCode: 400,
+                message: "Image does not uploaded",
+            }
+        }
+        return await this.landingPageService.uploadImage(s3Response["Location"], file)
+    }
 
     @Post('get-banner-image')
     @HttpCode(HttpStatus.OK)
