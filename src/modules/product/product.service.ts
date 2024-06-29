@@ -604,6 +604,7 @@ export class ProductService {
                               'color',t.color,
                               'size',t."size" ,
                               'tax',t.tax,
+                              'size',t.size,
                               'mrp',t.mrp ,
                               'about',t.about,
                               'selling_price',t.selling_price,
